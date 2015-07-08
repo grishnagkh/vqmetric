@@ -22,6 +22,7 @@
 #define psnr_hpp
 
 #include "Metric.hpp"  
+#include <math.h>
 
 /*
  * Video Quality Metric, implementation is based on
@@ -35,14 +36,67 @@
 /***** TODO *****/
 
 class VQM: public Metric{
+	double* si_loss;
+	double* si_gain;
+	double* hv_loss;
+	double* hv_gain;
+	double* chroma_spread;
+	double* ct_ati_gain;
+	double* chroma_extreme;
+
+	int nSlices;
+
+	static const double FACTOR_SI_LOSS = -0.2097;
+	static const double FACTOR_SI_GAIN = -2.3416;
+	static const double FACTOR_HV_LOSS = 0.5969;
+	static const double FACTOR_HV_GAIN = 0.2483;
+	static const double FACTOR_CHROMA_SPREAD = 0.0192;
+	static const double FACTOR_CT_ATI_GAIN = 0.0431;
+	static const double FACTOR_CHROMA_EXTREME = 0.0076;
+
 	public:
 		/* 
-		 * Computes PSNR metrics value for a video sequence 
- 		 * according to the mean of the PSNR value for each
-         * frame. 
+		 * Computes VQM values
+		 * as the Video Quality Metric is time sensitive, 
+		 * we need a final cumulation of the results and 
+ 		 * the return value only indicates success of the computation
+		 *
+		 * argument 1: reference image sequence
+		 * argument 2: processed image sequence
+		 * argument 3: number of fraems to process
+		 * 
+		 * the  image sequences are split into space regions, 
+		 * the time cumulation is done in getMetricValue, 
+		 * space cumulation is done here, therefore the length of 
+		 * a time region is determined by the input to this function
+		 * this enables that we do not need to keep the whole 
+		 * video sequences in memory, but only a fraction with the duration 
+		 * of the S-T region (recommended: 0.2s = fps*0.2 frames)
+		 * 
+		 * the result of a single computation round are stored 
+		 * internally in the VQM object
 		 */
 		double compute(cv::Mat[], cv::Mat[], int);
+		/*
+		 * cumulates the results
+		 */
+		double timeCollapse();
+
+		/* 
+		 * Constructor
+		 * parameter1: number of time slices for the computation 
+		 *
+		 */
+		VQM(int);
 	private:
+		/* (squared) euclidean distance of two points */
+		double euclideansq(double, double, double, double);
+		/* ratio comparison */
+		double ratioComp(double, double);
+		/* logarithmic comparison */ 
+		double logComp(double, double);
+		/* clip a number to a threshold*/
+		double clip(double, double); 
 		
 };
 
