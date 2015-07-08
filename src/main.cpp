@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <math.h>
+#include "VideoCaptureReader.hpp"
 
 using namespace cv;
 using namespace std;
@@ -258,12 +259,12 @@ float calc_psnr(Mat orig, Mat processed, Mat tmp){
 }
 
 int main(int ac, const char** av){
-
+/*
 
 	Mat src1 = imread("img.png", CV_LOAD_IMAGE_COLOR);
 	Mat src, si, hvbar,hv;
 	src1.convertTo(src, CV_32F);
-
+*/
 /*
 	imshow("orig before call",src);
 	waitKey(1000);
@@ -274,7 +275,7 @@ int main(int ac, const char** av){
 */
 
 /*	test();	*/
-
+/*
 imshow("orig before call",src);
 	filter_si_hv_bar( src, si, hvbar, hv, 13);
 
@@ -286,9 +287,31 @@ imshow("hvbar",hvbar);
 //	waitKey(5000);
 imshow("hv",hv);
 	waitKey(15000);
+*/
+	VideoCaptureReader in("1000.mp4");
+		
 
+
+	std::cout <<in.getVideoFilePath() << ";" << in.getVideoWidth()
+		<<"x"<< in.getVideoHeight()
+		<<"@"<< in.getFps() 
+		<<";"<< in.getNFrames() 
+		<<";" << in.isOpened()
+		<< endl;
+
+	Mat frame;
+	bool end = true;
+	while(end){
+		end = in.nextFrame(frame);
+		imshow("",frame);
+		waitKey(1000 / in.getFps());
+	}
+
+	
 	return 0;	
+
 }
+
 
 int psnr_ssim(){
 
