@@ -3,7 +3,8 @@
 
 #include "VideoReader.hpp"
 
-using namespace std; 
+using namespace std;
+ 
 class VideoCaptureReader: public VideoReader{
 	cv::VideoCapture cap;
 	public:  
