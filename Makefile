@@ -10,7 +10,7 @@ OBJDIR = build
 vpath %.cpp src
 vpath %.hpp include
 
-OBJ = ${addprefix ${OBJDIR}/, VideoCaptureReader.o VideoReader.o main.o}
+OBJ = ${addprefix ${OBJDIR}/, VideoReader.o VideoCaptureReader.o Util.o ImageUtil.o main.o}
 
 all: ${OBJ} 
 	${CC} ${CFLAGS} ${OBJ} ${LIBS} ${LDFLAGS} -o main
