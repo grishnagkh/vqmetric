@@ -26,19 +26,45 @@
 
 using namespace std;
 
+/*
+ * Class responsible for grabbing video frames
+ */
+
 class VideoReader{
 
-	public: 
+	public:
+		/* 
+		 * Reads the next Frame of the Video and stores it in a Mat  
+		 * returns false if the video has no frames left to read, true otherwise.
+         */ 
 		virtual bool nextFrame(cv::Mat&) = 0;
+		/*
+		 * returns frames per second 
+         */
 		virtual int getFps() = 0;
+		/*
+		 * returns video width 
+         */
 		virtual int getVideoWidth() = 0;
+		/*
+		 * returns video height
+         */
 		virtual int getVideoHeight() = 0;
+		/*
+		 * returns number of frames
+         */
 		virtual int getNFrames() = 0;
-
+		/*
+		 * returns the video file path
+         */
 		std::string getVideoFilePath();
+		/*
+		 * constructor 
+         */
 		VideoReader(string);
 
 	protected:
+		/* path to the video file */
 		string videoFilePath;
 };
 

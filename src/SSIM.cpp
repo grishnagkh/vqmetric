@@ -29,10 +29,6 @@ double SSIM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 }
 
 double SSIM::computeSingleFrame( const cv::Mat& I1, const cv::Mat& I2){
-	/* 
-		Code from 
-		http://docs.opencv.org/doc/tutorials/highgui/video-input-psnr-ssim/video-input-psnr-ssim.html
-	*/
 
     const double C1 = 6.5025, C2 = 58.5225;
     /***************************** INITS **********************************/

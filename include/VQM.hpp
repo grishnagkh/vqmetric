@@ -18,21 +18,32 @@
  * MA 02110-1301 USA
  */
 
-#ifndef Util_hpp
-#define Util_hpp
+#ifndef psnr_hpp
+#define psnr_hpp
 
-#include <math.h>
+#include "Metric.hpp"  
 
 /*
- * Utility class , atm mainly for comparison of feature streams, i think we'll move this later into VQM metric...
+ * Video Quality Metric, implementation is based on
+ *
+ * Pinson, Margaret H., and Stephen Wolf. 
+ * "A new standardized method for objectively measuring video quality." 
+ * Broadcasting, IEEE Transactions on 50.3 (2004): 312-322
+ *
  */
 
-class Util{
-	public:  
-		double euclideansq(double, double, double, double);
-		double ratioComp(double, double);
-		double logComp(double, double);
-		double clip(double, double); 
+/***** TODO *****/
+
+class VQM: public Metric{
+	public:
+		/* 
+		 * Computes PSNR metrics value for a video sequence 
+ 		 * according to the mean of the PSNR value for each
+         * frame. 
+		 */
+		double compute(cv::Mat[], cv::Mat[], int);
+	private:
+		
 };
 
 #endif

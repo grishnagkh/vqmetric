@@ -23,10 +23,22 @@
 
 #include "Metric.hpp"  
 
+/*
+ * Peak Signal to Noise Ratio Metric
+ */
+
 class PSNR: public Metric{
 	public:
+		/* 
+		 * Computes PSNR metrics value for a video sequence 
+ 		 * according to the mean of the PSNR value for each
+         * frame. 
+		 */
 		double compute(cv::Mat[], cv::Mat[], int);
 	private:
+		/* 
+		 * Computes PSNR Value for a pair of images. 
+ 		 */
 		double computeSingleFrame(cv::Mat&, cv::Mat&);
 };
 

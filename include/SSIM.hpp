@@ -23,10 +23,22 @@
 
 #include "Metric.hpp" 
 
+/*
+ * Structured Similarity (SSIM) Metric 
+ */
+
 class SSIM: public Metric{
 	public:
+		/* 
+		 * Computes SSIM metrics value for a video sequence 
+ 		 * according to the mean of the SSIM value for each
+         * frame. 
+		 */
 		double compute(cv::Mat[], cv::Mat[], int);
 	private:
+		/* 
+		 * Computes SSIM Value for a pair of images. 
+ 		 */
 		double computeSingleFrame(const cv::Mat&, const cv::Mat&);
 };
 

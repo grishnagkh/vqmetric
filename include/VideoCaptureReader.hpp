@@ -24,7 +24,13 @@
 #include "VideoReader.hpp"
 
 using namespace std;
- 
+
+/* 
+ * implementation of VideoReader using VideoCapture of opencv
+ * 
+ * for the ommited documentation see VideoReader
+ */ 
+
 class VideoCaptureReader: public VideoReader{
 	cv::VideoCapture cap;
 	public:  
@@ -39,8 +45,7 @@ class VideoCaptureReader: public VideoReader{
 				cv::VideoCapture cap();
 				this->cap.open(this->videoFilePath);
 			};
-
-
+		/* returns true when the file has been successfully opened, false otherwise */
 		bool isOpened(){
 			return this->cap.isOpened();
 		}
