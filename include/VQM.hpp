@@ -45,6 +45,7 @@ class VQM: public Metric{
 	double* chroma_extreme;
 
 	int nSlices;
+	int actSlice; 
 
 	static const double FACTOR_SI_LOSS = -0.2097;
 	static const double FACTOR_SI_GAIN = -2.3416;
@@ -77,6 +78,11 @@ class VQM: public Metric{
 		 * internally in the VQM object
 		 */
 		double compute(cv::Mat[], cv::Mat[], int);
+		/* 
+		 * returns the metric value until now, 
+		 * this is especially helpful when dealing with big files
+		 */
+		double getMetricValue();
 		/*
 		 * cumulates the results
 		 */

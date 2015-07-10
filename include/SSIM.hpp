@@ -28,6 +28,12 @@
  */
 
 class SSIM: public Metric{
+
+	int* nProcessed;
+	double* values; 
+	int actSlice;
+	int nSlices;
+
 	public:
 		/* 
 		 * Computes SSIM metrics value for a video sequence 
@@ -35,11 +41,23 @@ class SSIM: public Metric{
          * frame. 
 		 */
 		double compute(cv::Mat[], cv::Mat[], int);
+		/* 
+		 * returns the metric value
+		 */
+		double getMetricValue();
+		/*
+		 * Constructor, param: number of slices
+		 */
+		SSIM(int);
 	private:
 		/* 
 		 * Computes SSIM Value for a pair of images. 
  		 */
 		double computeSingleFrame(const cv::Mat&, const cv::Mat&);
+		/*
+		 * add calculation results of a slice...
+		 */
+		void addCalculation(double, int);
 };
 
 #endif

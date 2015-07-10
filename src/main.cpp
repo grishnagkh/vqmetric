@@ -18,38 +18,92 @@
  * MA 02110-1301 USA
  */
 
+#include <ctime>
 #include "opencv2/opencv.hpp"
 #include "VideoCaptureReader.hpp"
 #include "PSNR.hpp"
 #include "SSIM.hpp"
 
-using namespace std;
+int main(int ac, const char *av[]){
 
-int main(int ac, const char** av){
+	if(ac != 3){
+		std::cout << "Wrong unmber of parameters: expected <input filname> <output filename>";
+		return -1;
+	}
  
-	VideoCaptureReader orig("out1.mp4");
-	VideoCaptureReader processed("out2.mp4");
+	VideoCaptureReader orig(av[1]);
+	VideoCaptureReader processed(av[2]);
 
-	int n=60;		
+	if(orig.getFps() != processed.getFps()){
+		std::cout << "original and processed video have different frame rates, we abort here";
+		return -1;
+	}
+	if(orig.getVideoWidth() != processed.getVideoWidth()){
+		std::cout << "original and processed video have different widths, we abort here";
+		return -1;
+	}
+	if(orig.getVideoHeight() != processed.getVideoHeight()){
+		std::cout << "original and processed video have different heights, we abort here";
+		return -1;
+	}
+	if(orig.getNFrames() != processed.getNFrames()){
+		std::cout << "original and processed video have different number of frames, we abort here";
+		return -1;
+	}
+	
 
-	cv::Mat in[n];
-	cv::Mat out[n];
+	// 2 seconds slices
+	int framesPerSlice = orig.getFps() * 0.2;
+
+	int nSlices = orig.getNFrames() / framesPerSlice; //testing
+	if(orig.getNFrames() % framesPerSlice != 0){
+		nSlices++; 
+	}	
+
+	std::cout << "Splitting calculation in " << nSlices << " 0.2second slices with " << framesPerSlice << " frames" << std::endl;
+
+	PSNR psnr(nSlices);
+	SSIM ssim(nSlices);
+
+	cv::Mat in[framesPerSlice];
+	cv::Mat out[framesPerSlice];
 
 	cv::Mat tmp;	 
 
-	for(int i=0; i<n; i++){
-		orig.nextFrame(tmp);
-		tmp.convertTo(in[i], CV_32F);
-		processed.nextFrame(tmp);
-		tmp.convertTo(out[i], CV_32F);		
-	}
+	for(int slice=0; slice<nSlices; slice++){
 
-	PSNR psnr;
-	SSIM ssim;
+//		std::cout << "Decompressing and converting videos of slice " << slice << endl;
 
-	std::cout<< "PSNR of first " <<  n << " frames: " << psnr.compute(in, out, n) <<endl;
-	std::cout<< "SSIM of first " <<  n << " frames: " << ssim.compute(in, out, n) <<endl;
- 
+		clock_t before, after;
+
+		before = clock();
+
+		for(int i=0; i<framesPerSlice; i++){
+			orig.nextFrame(tmp);
+			tmp.convertTo(in[i], CV_32F);
+			processed.nextFrame(tmp);
+			tmp.convertTo(out[i], CV_32F);		
+		}
 	
+//		after = clock();
+//		std::cout << "decompression and conversion finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
+
+// 		before = clock();
+//		std::cout << "calculating PSNR for slice " << slice << endl;
+		std::cout<< "PSNR for slice " << slice << ": " << psnr.compute(in, out, framesPerSlice) <<endl;
+//		after = clock();
+//		std::cout << "calculation of PSNR for slice " << slice << " finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
+
+//		before = clock();
+//		std::cout << "calculating SSIM for slice " << slice << endl;
+		std::cout<< "SSIM for slice " << slice << ": " << ssim.compute(in, out, framesPerSlice) <<endl;
+//		after = clock();		
+//		std::cout << "calculation of SSIM for slice " << slice << " finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
+	}
+	std::cout << "..............." << endl;
+
+	std::cout << "PSNR for all slices " << psnr.getMetricValue() << endl;
+	std::cout << "SSIM for all slices " << ssim.getMetricValue() << endl;
+
 	return 0;	
 }

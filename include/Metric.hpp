@@ -41,6 +41,11 @@ class Metric{
 		* param3: Number of frames to process
 		*/
 		virtual double compute(cv::Mat[], cv::Mat[], int) = 0;
+		/* 
+		 * returns the metric value until now, 
+		 * this is especially helpful when dealing with big files
+		 */
+		virtual double getMetricValue() = 0;
 	protected:		
 		/******************************/
 		/****** UTILITY functions *****/
