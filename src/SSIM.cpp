@@ -20,14 +20,50 @@
 
 #include "SSIM.hpp"
 
+
+
+SSIM::SSIM(int nSlices){
+//	std::cout << "[debug] calling SSIM constructor " << std::endl;
+	this->nSlices = nSlices;
+	nProcessed = new int[nSlices]();
+	values = new double[nSlices]();
+	actSlice = 0;
+}
+
+
 double SSIM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	double sum = 0;
 	for(int i=0; i<nFrames;i++){
 		sum += computeSingleFrame(orig[i], processed[i]);		
 	}
-	return sum/nFrames;
+	double ssim = sum/nFrames;
+//	std::cout << "[debug] ssim calc finished with value " << ssim << std::endl;
+//	std::cout << "[debug] adding the calculation to internal history" << std::endl;
+	addCalculation(ssim, nFrames);	
+	return ssim; 
 }
 
+/*
+ * Collapse metric value in time, luckily we just have to calculate weighted average...
+ */	
+double SSIM::getMetricValue(){
+	double sum = 0;
+	int n = 0;
+	for(int i=0; i<nSlices;i++){
+		sum += values[i]*nProcessed[i];
+		n += nProcessed[i];
+	}
+	return sum / n;
+}
+void SSIM::addCalculation(double val, int nFrames){
+//	std::cout << "[debug] addCqalculation internal variables: " << std::endl;
+//	std::cout << "[debug] \t val: " << val << std::endl;
+//	std::cout << "[debug] \t nFrames: " << nFrames << std::endl;
+// 	std::cout << "[debug] \t actSlice: " << actSlice << std::endl;
+	values[actSlice] = val;
+	nProcessed[actSlice] = nFrames;
+	actSlice++;
+}
 double SSIM::computeSingleFrame( const cv::Mat& I1, const cv::Mat& I2){
 
     const double C1 = 6.5025, C2 = 58.5225;

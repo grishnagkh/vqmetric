@@ -77,6 +77,11 @@ class VQM: public Metric{
 		 * internally in the VQM object
 		 */
 		double compute(cv::Mat[], cv::Mat[], int);
+		/* 
+		 * returns the metric value until now, 
+		 * this is especially helpful when dealing with big files
+		 */
+		double getMetricValue();
 		/*
 		 * cumulates the results
 		 */

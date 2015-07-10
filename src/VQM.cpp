@@ -20,8 +20,48 @@
 
 #include "VQM.hpp" 
 
-/***** TODO *****/
+VQM::VQM(int nSlices){
+	this->nSlices = nSlices;
+	this->si_loss = new double[nSlices]();
+	this->si_gain = new double[nSlices]();
+	this->hv_loss = new double[nSlices]();
+	this->hv_gain = new double[nSlices]();
+	this->chroma_spread = new double[nSlices]();
+	this->ct_ati_gain = new double[nSlices]();
+	this->chroma_extreme = new double[nSlices]();
+};
+
+
+
 double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
-	
+/***** TODO *****/	
 	return -1;
 }
+
+double VQM::timeCollapse(){
+/***** TODO *****/
+	return -1;
+}
+double VQM::getMetricValue(){
+/***** TODO *****/
+	return -1;
+}
+
+double VQM::euclideansq(double fo1, double fo2, double fp1, double fp2){
+	/* returns the square of the euclidean distance */
+	double t1 = (fo1 - fp1) ;
+	double t2 = (fo2 - fp2) ;
+	return t1*t1 + t2*t2;
+}
+double VQM::ratioComp(double orig, double processed){
+	return (processed-orig)/orig;
+}
+double VQM::logComp(double orig, double processed){
+	return log10(processed/orig);
+}
+ 
+double VQM::clip(double f, double threshold){
+	if(f >= threshold)
+		return f;
+	return threshold;
+} 

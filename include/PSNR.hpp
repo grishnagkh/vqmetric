@@ -21,6 +21,7 @@
 #ifndef psnr_hpp
 #define psnr_hpp
 
+#include <vector>
 #include "Metric.hpp"  
 
 /*
@@ -28,6 +29,12 @@
  */
 
 class PSNR: public Metric{
+
+	int* nProcessed;
+	double* values; 
+	int actSlice;
+	int nSlices;
+
 	public:
 		/* 
 		 * Computes PSNR metrics value for a video sequence 
@@ -35,11 +42,23 @@ class PSNR: public Metric{
          * frame. 
 		 */
 		double compute(cv::Mat[], cv::Mat[], int);
+		/* 
+		 * returns the metric value 
+		 */
+		double getMetricValue();
+		/*
+		 * Constructor, param: number of slices
+		 */
+		PSNR(int);
 	private:
 		/* 
 		 * Computes PSNR Value for a pair of images. 
  		 */
 		double computeSingleFrame(cv::Mat&, cv::Mat&);
+		/*
+		 * add calculation results of a slice...
+		 */
+		void addCalculation(double, int);
 };
 
 #endif
