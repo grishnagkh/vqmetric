@@ -129,9 +129,6 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 
 	actSlice++;	
 
-
-double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
-/***** TODO *****/	
 	return -1;
 }
 
