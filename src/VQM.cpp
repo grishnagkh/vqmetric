@@ -38,8 +38,21 @@ VQM::VQM(int nSlices){
 
 //loss function: replace positive values with zero
 		//gain function: replace negative values with zero
-			
+	
+/* TODO: 
+	(1) extract 
+		gain, 
+		loss 
+		perceptability threshold 
+		variance of s-region
+		mean of s-region
+		[ for readability and less error prone coding :) ]
+	(2) test si_loss, si_gain
+	(3) implement rest
+	(4) maybe only spatial collapse and we save each feature stream?
 
+	//meet br: i think the variance has to be calculated wrt all frames in 0.2s segment...
+*/
 double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	/* input: original frames */ 
 	
@@ -82,6 +95,7 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	double streamSIGain[slen];
 	
 	int cnt=0;
+	double thresh;
 
 	for(int i=0; i<nFrames; i++){
 		orig[i].convertTo(lumO[i], CV_32F);
@@ -101,13 +115,27 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		cv::sqrt(t2 - t1.mul(t1), siSdP[i]); // var(X) = E(X^2) - [E(X)]^2
 		
 		/*  [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/	
-		cv::threshold(siSdP[i], siSdPLoss[i], 12, 12, CV_THRESH_BINARY);
-		cv::threshold(siSdO[i], siSdOLoss[i], 12, 12, CV_THRESH_BINARY);
+		
+		thresh = 12;
+		cv::threshold(siSdO[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 12, 0 otherwise
+		cv::threshold(siSdO[i], siSdOLoss[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 12
+		siSdOLoss[i] = siSdOLoss[i] + thresh*t1; // add 12 if v<12
+
+		cv::threshold(siSdP[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 12
+		cv::threshold(siSdP[i], siSdPLoss[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 12
+		siSdPLoss[i] = siSdPLoss[i] + thresh*t1; // add 12 if v<12
 
 		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */
+		thresh = 8;
 
-		cv::threshold(siSdP[i], siSdPGain[i], 8, 8, CV_THRESH_BINARY);
-		cv::threshold(siSdO[i], siSdOGain[i], 8, 8, CV_THRESH_BINARY);
+		cv::threshold(siSdP[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 8
+		cv::threshold(siSdP[i], siSdPGain[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 8
+		siSdPGain[i] = siSdPGain[i] + thresh*t1; // add 8 if v<8	
+
+		cv::threshold(siSdO[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 8
+		cv::threshold(siSdO[i], siSdOGain[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 8
+		siSdOGain[i] = siSdOGain[i] + thresh*t1; // add 8 if v<8	
+
 
 		/* [si_loss (5)] compare original and processed feature streams using ratio comparison function followed by loss function */	
 		cv::divide(siSdPLoss[i] - siSdOLoss[i], siSdOLoss[i], comparedFeatureStream[i]); 	//ratio compare
@@ -123,7 +151,7 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		cv::log(siSdOGain[i],t1); //ln(o)
 		cv::log(siSdPGain[i],t2); //ln(p)
 		cv::subtract(t2, t1, comparedFeatureStreamGain[i]); //ln(p/o) = ln(p) - ln(o)
-		comparedFeatureStreamGain[i] /= 2.30258509299; //l10(p/o)
+		comparedFeatureStreamGain[i] /= 2.30258509299; //log10(p/o)
 
 		/* gain function */
 		cv::threshold(comparedFeatureStreamGain[i], comparedFeatureStreamGain[i], 0, -1, CV_THRESH_TOZERO);
@@ -159,13 +187,14 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	 */
 
 		//discussion: 4/5 are shifted partially into timecollapse or getmetricvalue
-		//for now we only spatially collapse fully and timecollapse for a 0.2 second block
+		//for now we only spatially collapse for a 0.2 second block
 	double si_gain_avg = 0;
 	for(int i=0; i<slen; i++){ 
 		si_gain_avg += streamSIGain[i];
 	}
 	si_gain_avg /= slen;		
-	si_gain[actSlice] = si_gain_avg; //si_gain now contains the spatially collapsed 0.2second block collapsed time slice
+	si_gain[actSlice] = si_gain_avg; 
+	/* si_gain now contains the spatially collapsed 0.2second block collapsed time slice */
 
 	actSlice++;	
 
