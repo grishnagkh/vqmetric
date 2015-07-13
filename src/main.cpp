@@ -74,9 +74,9 @@ int main(int ac, const char *av[]){
 
 //		std::cout << "Decompressing and converting videos of slice " << slice << endl;
 
-		clock_t before, after;
+	//	clock_t before, after;
 
-		before = clock();
+//		before = clock();
 
 		for(int i=0; i<framesPerSlice; i++){
 			orig.nextFrame(tmp);

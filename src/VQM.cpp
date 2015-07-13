@@ -56,6 +56,8 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	cv::Mat hvBarO[nFrames], hvBarP[nFrames];
 
 	cv::Mat siSdO[nFrames], siSdP[nFrames];
+	cv::Mat siSdOLoss[nFrames], siSdPLoss[nFrames];
+	cv::Mat siSdOGain[nFrames], siSdPGain[nFrames];
 
 	int h = orig[0].rows;
 	int w = orig[0].cols;
@@ -72,11 +74,12 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	/* a stream of compared images */
 	cv::Mat comparedFeatureStream[nFrames];
 	cv::Mat comparedFeatureStreamLoss[nFrames];
-//	cv::Mat comparedFeatureStreamGain[nFrames];
+	cv::Mat comparedFeatureStreamGain[nFrames];
 
 	/* array for extracted 8x8 grid values */
 	int slen = nFrames*(w/stdimx)*(h/stdimy);
 	double streamSILoss[slen];
+	double streamSIGain[slen];
 	
 	int cnt=0;
 
@@ -98,34 +101,71 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		cv::sqrt(t2 - t1.mul(t1), siSdP[i]); // var(X) = E(X^2) - [E(X)]^2
 		
 		/*  [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/	
-		cv::threshold(siSdP[i], siSdP[i], 12, -1, CV_THRESH_BINARY);
-		cv::threshold(siSdO[i], siSdO[i], 12, -1, CV_THRESH_BINARY);
+		cv::threshold(siSdP[i], siSdPLoss[i], 12, 12, CV_THRESH_BINARY);
+		cv::threshold(siSdO[i], siSdOLoss[i], 12, 12, CV_THRESH_BINARY);
+
+		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */
+
+		cv::threshold(siSdP[i], siSdPGain[i], 8, 8, CV_THRESH_BINARY);
+		cv::threshold(siSdO[i], siSdOGain[i], 8, 8, CV_THRESH_BINARY);
 
 		/* [si_loss (5)] compare original and processed feature streams using ratio comparison function followed by loss function */	
-		cv::divide(siSdP[i] - siSdO[i], siSdO[i], comparedFeatureStream[i]); 	//ratio compare
+		cv::divide(siSdPLoss[i] - siSdOLoss[i], siSdOLoss[i], comparedFeatureStream[i]); 	//ratio compare
 	
 		/* loss function */ 
-		cv::threshold(comparedFeatureStreamLoss[i], comparedFeatureStream[i], 0, -1, CV_THRESH_TOZERO_INV);		
+		cv::threshold(comparedFeatureStreamLoss[i], comparedFeatureStreamLoss[i], 0, -1, CV_THRESH_TOZERO_INV);		
+		
+		/* [si_gain (3) ] compare original and processed feature streams using log comparison function followed by gain function*/ 
+		
 
-		/* extract 8x8 grid */
+		/* log comparison: log10(processed/orig) */
+		// = ln(processed/orig)/ln(10) ; ln(10) ~ 2.30258509299
+		cv::log(siSdOGain[i],t1); //ln(o)
+		cv::log(siSdPGain[i],t2); //ln(p)
+		cv::subtract(t2, t1, comparedFeatureStreamGain[i]); //ln(p/o) = ln(p) - ln(o)
+		comparedFeatureStreamGain[i] /= 2.30258509299; //l10(p/o)
+
+		/* gain function */
+		cv::threshold(comparedFeatureStreamGain[i], comparedFeatureStreamGain[i], 0, -1, CV_THRESH_TOZERO);
+
+
+		/* extract 8x8 grid for si_loss*/
 		for(int y=0; y<h; y+=stdimy){
 			for(int x=0; x<w; x+=stdimx){
+				streamSIGain[cnt] = comparedFeatureStreamGain[i].at<float>(x,y);				
 				streamSILoss[cnt++] = comparedFeatureStreamLoss[i].at<float>(x,y);
 			}
 		}
+
+		
 	}
 
-	/* [si_loss (6)] spatially collapse by computing the average of the worst (i.e. most impaired) 5% of S-T blocks for each 0.2 second slice of time */
-	
+	/* [si_loss (6)] spatially collapse by computing the average of the worst (i.e. most impaired) 5% of S-T blocks for each 0.2 second slice of time */	
+
 	std::sort(streamSILoss, streamSILoss+sizeof(streamSILoss)/sizeof(streamSILoss[0]));
 	int until = slen*.05;
 	double si_avg = 0;
 	for(int i=0; i<until; i++){ 
-		si_avg = streamSILoss[i];
+		si_avg += streamSILoss[i];
 	}
 	si_avg /= until;	
 
 	si_loss[actSlice] = si_avg;
+
+		
+	/* 
+	 * [si_gain (4) ] spatially and temporally collapse by computing the average of all block and the clip at a minimum value of 0.004
+	 * [si_gain (5) ] set all values greater than 0.14 to 0.14
+	 */
+
+		//discussion: 4/5 are shifted partially into timecollapse or getmetricvalue
+		//for now we only spatially collapse fully and timecollapse for a 0.2 second block
+	double si_gain_avg = 0;
+	for(int i=0; i<slen; i++){ 
+		si_gain_avg += streamSIGain[i];
+	}
+	si_gain_avg /= slen;		
+	si_gain[actSlice] = si_gain_avg; //si_gain now contains the spatially collapsed 0.2second block collapsed time slice
 
 	actSlice++;	
 
