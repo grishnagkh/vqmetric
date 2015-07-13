@@ -102,10 +102,11 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		processed[i].convertTo(lumP[i], CV_32F);
 	 	/*  apply SI13 filter to each luminance plane */
 		filter_si_hv_bar(lumO[i], siO[i], hvBarO[i], hvO[i], 13);
-		filter_si_hv_bar(lumP[i], siP[i], hvBarP[i], hvP[i], 13);
-		
+		filter_si_hv_bar(lumP[i], siP[i], hvBarP[i], hvP[i], 13);	
+
+	//maybe i fucked up the st region split.. so leave this code as template for now...
 		/* [si:loss (3) ] Compute the standard deviation of each S-T region */
-	
+/*	
 		filter2D(siO[i], t1, -1 , mean_kernel, anchor ); //E(X)
 		filter2D(siO[i].mul(siO[i]), t2, -1 , mean_kernel, anchor ); // E(X^2)
 		cv::sqrt(t2 - t1.mul(t1), siSdO[i]); // var(X) = E(X^2) - [E(X)]^2
@@ -115,7 +116,7 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		cv::sqrt(t2 - t1.mul(t1), siSdP[i]); // var(X) = E(X^2) - [E(X)]^2
 		
 		/*  [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/	
-		
+/*		
 		thresh = 12;
 		cv::threshold(siSdO[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 12, 0 otherwise
 		cv::threshold(siSdO[i], siSdOLoss[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 12
@@ -126,7 +127,7 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		siSdPLoss[i] = siSdPLoss[i] + thresh*t1; // add 12 if v<12
 
 		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */
-		thresh = 8;
+/*		thresh = 8;
 
 		cv::threshold(siSdP[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 8
 		cv::threshold(siSdP[i], siSdPGain[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 8
@@ -136,40 +137,38 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 		cv::threshold(siSdO[i], siSdOGain[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 8
 		siSdOGain[i] = siSdOGain[i] + thresh*t1; // add 8 if v<8	
 
-
 		/* [si_loss (5)] compare original and processed feature streams using ratio comparison function followed by loss function */	
-		cv::divide(siSdPLoss[i] - siSdOLoss[i], siSdOLoss[i], comparedFeatureStream[i]); 	//ratio compare
+/*		cv::divide(siSdPLoss[i] - siSdOLoss[i], siSdOLoss[i], comparedFeatureStream[i]); 	//ratio compare
 	
 		/* loss function */ 
-		cv::threshold(comparedFeatureStreamLoss[i], comparedFeatureStreamLoss[i], 0, -1, CV_THRESH_TOZERO_INV);		
+/*		cv::threshold(comparedFeatureStreamLoss[i], comparedFeatureStreamLoss[i], 0, -1, CV_THRESH_TOZERO_INV);		
 		
 		/* [si_gain (3) ] compare original and processed feature streams using log comparison function followed by gain function*/ 
 		
 
 		/* log comparison: log10(processed/orig) */
 		// = ln(processed/orig)/ln(10) ; ln(10) ~ 2.30258509299
-		cv::log(siSdOGain[i],t1); //ln(o)
+/*		cv::log(siSdOGain[i],t1); //ln(o)
 		cv::log(siSdPGain[i],t2); //ln(p)
 		cv::subtract(t2, t1, comparedFeatureStreamGain[i]); //ln(p/o) = ln(p) - ln(o)
 		comparedFeatureStreamGain[i] /= 2.30258509299; //log10(p/o)
 
 		/* gain function */
-		cv::threshold(comparedFeatureStreamGain[i], comparedFeatureStreamGain[i], 0, -1, CV_THRESH_TOZERO);
+	/*	cv::threshold(comparedFeatureStreamGain[i], comparedFeatureStreamGain[i], 0, -1, CV_THRESH_TOZERO);
 
 
 		/* extract 8x8 grid for si_loss*/
-		for(int y=0; y<h; y+=stdimy){
+/*		for(int y=0; y<h; y+=stdimy){
 			for(int x=0; x<w; x+=stdimx){
 				streamSIGain[cnt] = comparedFeatureStreamGain[i].at<float>(x,y);				
 				streamSILoss[cnt++] = comparedFeatureStreamLoss[i].at<float>(x,y);
 			}
 		}
 
-		
-	}
-
+*/	}
+ 
 	/* [si_loss (6)] spatially collapse by computing the average of the worst (i.e. most impaired) 5% of S-T blocks for each 0.2 second slice of time */	
-
+/*
 	std::sort(streamSILoss, streamSILoss+sizeof(streamSILoss)/sizeof(streamSILoss[0]));
 	int until = slen*.05;
 	double si_avg = 0;
@@ -188,13 +187,49 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 
 		//discussion: 4/5 are shifted partially into timecollapse or getmetricvalue
 		//for now we only spatially collapse for a 0.2 second block
-	double si_gain_avg = 0;
+/*	double si_gain_avg = 0;
 	for(int i=0; i<slen; i++){ 
 		si_gain_avg += streamSIGain[i];
 	}
 	si_gain_avg /= slen;		
 	si_gain[actSlice] = si_gain_avg; 
 	/* si_gain now contains the spatially collapsed 0.2second block collapsed time slice */
+
+
+
+
+	/* split S-T regions, assuming that we are given a single time slice with nFrames */
+	int rW = 8;
+	int rH = 8;
+	int nRegions = w / rW * h / rH;
+	int elemPerRegion = rW*rH*nFrames;
+
+	int region;
+	int idx;
+	float siRegP[nRegions][elemPerRegion];
+	float siRegO[nRegions][elemPerRegion];
+	
+	region = 0;
+	for(int y=0; y<h; y+=rH){
+		for(int x=0; x<w; x+=rW){
+			// each region
+			idx = 0;
+			for(int i=0; i<nFrames; i++){
+				//each input frame 
+				for(int dy=0; dy<rH; dy++){
+					for(int dx=0; dx<rW; dx++){
+						//8x8 window
+						siRegO[region][idx] = siO[i].at<float>(x+dx,y+dy);
+						siRegP[region][idx] = siP[i].at<float>(x+dx,y+dy);
+						idx++;
+					}
+				}
+			}
+			region++;
+		}
+	}
+
+	//TODO... 
 
 	actSlice++;	
 
