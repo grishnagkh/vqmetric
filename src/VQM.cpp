@@ -34,23 +34,7 @@ VQM::VQM(int nSlices){
 
 /* 
  * computes parts of VQM metrics for a .2 second slice 
- */
-
-//loss function: replace positive values with zero
-		//gain function: replace negative values with zero
-	
-/* TODO: 
-	(1) extract 
-		gain, 
-		loss 
-		perceptability threshold 
-		variance of s-region
-		mean of s-region
-		[ for readability and less error prone coding :) ]
-	(2) test si_loss, si_gain
-	(3) implement rest
-	(4) maybe only spatial collapse and we save each feature 
-*/
+ */	
 double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	/* input: original frames */ 
 std::cout << "starting vqm calculation" << std::endl;
@@ -92,10 +76,9 @@ std::cout << "[debug] transformation to cv32_f and calculating si, hv, and hvbar
 	int nRegions = w / rW * h / rH;
 	int elemPerRegion = rW*rH*nFrames;
 
-
 	int region;
 	int idx;
-
+	
 	float** siRegO = new float*[nRegions];
 	float** siRegP = new float*[nRegions];
 	float** hvRegO = new float*[nRegions];
@@ -112,12 +95,13 @@ std::cout << "[debug] transformation to cv32_f and calculating si, hv, and hvbar
 		hvBarRegP[i] = new float[elemPerRegion];
 	}
 
+
 	region = 0;
 	int idxX, idxY;
 
 std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << elemPerRegion << " elements per region" << std::endl;
 
-	/* [si_loss(2), hv_loss (2)] Divide each of the SI, HV and HVBAR video sequences into 8 pixel x 8 line x 0.2 second S-T regions. */
+	/* [si_loss(2), hv_loss (2)] Divide each of the SI, HV and HVBAR video sequences into 8 pixel x 8 line x 0.2 second S-T regions. */	
 
 	for(int y=0; y<h/rH; y++){
 		for(int x=0; x<w/rW; x++){
@@ -146,96 +130,40 @@ std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << el
 		}
 	}
 
-	double meanO = 0;
-	double meanP = 0;
-	double tmpO = 0;
-	double tmpP = 0;
-
-	double sdO;
-	double sdP;
-
-	double fs_si_loss[nRegions]; /* si loss feature stream */
+	/* feature streams */
+	double fs_si_loss[nRegions]; 
 	double fs_si_gain[nRegions];
-	double fs_hv_loss[nRegions]; /* hv loss feature stream */
-	double fs_hv_gain[nRegions];
-	
-	double thresh = 0;
+	double fs_hv_loss[nRegions]; 
+	double fs_hv_gain[nRegions];	
 
-	double hvmeanO = 0;
-	double hvbarmeanO = 0;
-	double hvmeanP = 0;
-	double hvbarmeanP = 0;
-	double hvratioO = 0;
-	double hvratioP = 0;
+	double sdsiO, sdsiP;
+	double hvratioO, hvratioP;
 
-	for(int reg=0; reg < nRegions; reg++){
-		/* [hv_loss (3)] Compute the mean of each S-T region. */
+	for(int reg=0; reg < nRegions; reg++){		
 		/* [si:loss (3) ] Compute the standard deviation of each S-T region */
-		meanO = 0;
-		meanP = 0;
-		hvmeanO = 0;
-		hvmeanP = 0;
-		hvbarmeanO = 0;
-		hvbarmeanP = 0;
 
-		for(int elem=0; elem < elemPerRegion; elem++){
-			meanO += siRegO[reg][elem];
-			meanP += siRegP[reg][elem];
-			hvmeanO += hvRegO[reg][elem];
-			hvmeanP += hvRegP[reg][elem];
-			hvbarmeanO += hvBarRegO[reg][elem];
-			hvbarmeanP += hvBarRegP[reg][elem];
-		}	
-		meanO /= elemPerRegion;
-		meanP /= elemPerRegion;
+		sdsiO = calc_sd(siRegO[reg],elemPerRegion);
+		sdsiP = calc_sd(siRegP[reg],elemPerRegion);
 
-		hvmeanO /= elemPerRegion;
-		hvmeanP /= elemPerRegion;
-		hvbarmeanO /= elemPerRegion;
-		hvbarmeanP /= elemPerRegion;
-
-		for(int elem = 0; elem < elemPerRegion; elem++){
-			tmpO += (meanO - siRegO[reg][elem])*(meanO - siRegO[reg][elem]);
-			tmpP += (meanP - siRegP[reg][elem])*(meanP - siRegP[reg][elem]);
-		}
-		tmpO = sqrt(tmpO/(elemPerRegion-1));
-		tmpP = sqrt(tmpP/(elemPerRegion-1));
-		/* [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/	
-		thresh = 12;
-		sdO = tmpO < thresh ? thresh : tmpO;			
-		sdP = tmpP < thresh ? thresh : tmpP;		
-
+		/* [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/
 		/* [si_loss (5)] compare original and processed feature streams using ratio comparison function followed by loss function */
-		fs_si_loss[reg] = loss(ratioComp(sdO, sdP));
-
-//std::cout<<"[debug] sdO: " << sdO << ", sdP: " << sdP  << ", fs: " <<	fs_si_loss[reg]  <<std::endl;
-		
-		/* [si_gain (1) ] si_loss 1..3 -> results in tmpO, tmpP */
-		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */
-		thresh = 8;
-		sdO = tmpO < thresh ? thresh : tmpO;			
-		sdP = tmpP < thresh ? thresh : tmpP;						
+		fs_si_loss[reg] = loss(ratioComp(perc_thresh(sdsiO, 12), perc_thresh(sdsiP, 12)));
+ 
+		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */				
 		/* [si_gain (3) ] compare original and processed feature streams using log comparison function followed by gain function*/ 
-		fs_si_gain[reg] = gain(logComp(sdO, sdP));
+		fs_si_gain[reg] = gain(logComp(perc_thresh(sdsiO, 8), perc_thresh(sdsiP, 8)));
 
-		/* [hv_loss (4)] Apply a perceptibility threshold, replacing values less than 3 with 3. */
-		thresh = 3;
-		hvmeanO = hvmeanO < thresh ? thresh : hvmeanO;	
-		hvmeanP = hvmeanP < thresh ? thresh : hvmeanP;	
-		hvbarmeanO = hvbarmeanO < thresh ? thresh : hvbarmeanO;	
-		hvbarmeanP = hvbarmeanP < thresh ? thresh : hvbarmeanP;	
+		/* [hv_loss (3)] Compute the mean of each S-T region. */
+		/* [hv_loss (4)] Apply a perceptibility threshold, replacing values less than 3 with 3. */				
 		/* [hv_loss (5)] Compute the ratio (HV / HVBAR). */
-		hvratioO = hvmeanO / hvbarmeanO;
-		hvratioP = hvmeanP / hvbarmeanP;
+		hvratioO = perc_thresh(calc_mean(hvRegO[reg], elemPerRegion), 3) / perc_thresh(calc_mean(hvBarRegO[reg], elemPerRegion), 3);
+		hvratioP = perc_thresh(calc_mean(hvRegP[reg], elemPerRegion), 3) / perc_thresh(calc_mean(hvBarRegP[reg], elemPerRegion), 3);
 		/* [hv_loss(6)] Compare original and processed feature streams (each computed using steps 1 through 5) using the ratio comparison function (see equation 3) followed by the loss function. */		
 		fs_hv_loss[reg] = loss(ratioComp(hvratioO, hvratioP));
 		/* [hv_gain (2)] Compare original and processed feature streams using the log comparison function (see equation 4) followed by the gain function.*/
-		fs_hv_gain[reg] = gain(logComp(hvratioO, hvratioP));
-//std::cout << "hvgain "<<fs_hv_gain[reg] <<std::endl;
+		fs_hv_gain[reg] = gain(logComp(hvratioO, hvratioP)); 
 	}	
 	
-
-
 	/* [hv_gain (3)] Spatially collapse by computing the average of the worst 5% of blocks for each 0.2 second slice of time. */
 	/* [hv_gain (4)] Temporally collapse by taking the mean over all time slices. 	TODO: timecollapse*/ 
 	
@@ -352,63 +280,19 @@ std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << el
 	}	
 
 	/*	[ct_ati_gain (3)] Compute the standard deviation of each S-T region. */
-	double meanatiRegO, meanatiRegP, meanlumRegO, meanlumRegP;
 	double sdatiRegO, sdatiRegP, sdlumRegO, sdlumRegP;
 
 	for(int reg=0; reg < nRegions; reg++){
-		meanatiRegO = 0;
-		meanatiRegP = 0;
-		meanlumRegO = 0;
-		meanlumRegP = 0;
-
-		sdatiRegO = 0;
-		sdatiRegP = 0;
-		sdlumRegO = 0;
-		sdlumRegP = 0;
-
-		for(int elem=0; elem < elemPerRegion; elem++){
-			meanatiRegO += atiRegO[reg][elem];
-			meanatiRegP += atiRegP[reg][elem];
-			meanlumRegO += lumRegO[reg][elem];
-			meanlumRegP += lumRegP[reg][elem];
-		}
-
-		meanatiRegO /= elemPerRegion;
-		meanatiRegP /= elemPerRegion;
-		meanlumRegO /= elemPerRegion;
-		meanlumRegP /= elemPerRegion;
-
-
-
-//std::cout << meanatiRegO << "," << meanatiRegP << "," << meanlumRegO << "," << meanlumRegP << "|";
-
-		for(int elem = 0; elem < elemPerRegion; elem++){
-			sdatiRegO += (meanatiRegO - atiRegO[reg][elem])*(meanatiRegO - atiRegO[reg][elem]);
-			sdatiRegP += (meanatiRegP - atiRegP[reg][elem])*(meanatiRegP - atiRegP[reg][elem]);
-			sdlumRegO += (meanlumRegO - lumRegO[reg][elem])*(meanlumRegO - lumRegO[reg][elem]);
-			sdlumRegP += (meanlumRegP - lumRegP[reg][elem])*(meanlumRegP - lumRegP[reg][elem]);
-		}
-		sdatiRegO = sqrt(sdatiRegO/(elemPerRegion-1));
-		sdatiRegP = sqrt(sdatiRegP/(elemPerRegion-1));
-		sdlumRegO = sqrt(sdlumRegO/(elemPerRegion-1));
-		sdlumRegP = sqrt(sdlumRegP/(elemPerRegion-1));
-
 		/*	[ct_ati_gain (4)] Apply a perceptibility threshold, replacing values less than 3 with 3. */
-		thresh = 3;
-		sdatiRegO = sdatiRegO < thresh ? thresh : sdatiRegO;			
-		sdatiRegP = sdatiRegP < thresh ? thresh : sdatiRegP;	
-		sdlumRegO = sdlumRegO < thresh ? thresh : sdlumRegO;			
-		sdlumRegP = sdlumRegP < thresh ? thresh : sdlumRegP;	
+		sdatiRegO = perc_thresh(calc_sd(atiRegO[reg], elemPerRegion), 3);
+		sdatiRegP = perc_thresh(calc_sd(atiRegP[reg], elemPerRegion), 3);
+		sdlumRegO = perc_thresh(calc_sd(lumRegO[reg], elemPerRegion), 3);
+		sdlumRegP = perc_thresh(calc_sd(lumRegP[reg], elemPerRegion), 3);
+
 		/*	[ct_ati_gain (5)] Repeat steps 2 through 4 on the Y luminance video sequence (without perceptual filtering) to form “contrast” feature streams. */	
 		/*	[ct_ati_gain (6)] Multiply the contrast and ATI feature streams. */
 		/*	[ct_ati_gain (7)] Compare original and processed feature streams (each computed using steps 1 through 6) using the ratio comparison function (see equation 3) followed by the gain function. */
 		fs_ati_gain[reg] = gain(ratioComp(sdatiRegO * sdlumRegO, sdatiRegP * sdlumRegP));
-//std::cout << "[debug] non-deterministic sdatiRegO: "<< sdatiRegO  <<std::endl;
-//std::cout << "[debug] non-deterministic sdlumRegO: "<< sdlumRegO  <<std::endl;
-//std::cout << "[debug] non-deterministic sdatiRegP: "<< sdatiRegP  <<std::endl;
-//std::cout << "[debug] non-deterministic sdlumRegP: "<< sdlumRegP  <<std::endl;
-
-//std::cout << fs_ati_gain[reg] << "|";
 	}
 
 
@@ -419,11 +303,6 @@ std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << el
 	}
 	avg /= nRegions;
 	ct_ati_gain[actSlice] = avg; 
-
-
-
-//std::cout << "[debug] length of fs_ati_gain VS nRegions" << std::endl;
-//std::cout << "[debug] " << sizeof(fs_ati_gain)/sizeof(fs_ati_gain[0]) << " VS " << nRegions << std::endl;
 
 /*	[ct_ati_gain (9)] Temporally collapse by sorting values in time and selecting the 10% level. The parameter values are all positive, so this temporal collapsing function is a form of best-case processing, detecting impairments that are nearly always present. */
 
@@ -450,13 +329,11 @@ chroma_extreme
 	(3) Temporally collapse by computing standard deviation of the results from step 2
 
 */
-
-
-
 	actSlice++;	
 
 	return -1;
 }
+
 double VQM::loss(double d){
 	if(d>0) 
 		return 0;
@@ -495,3 +372,21 @@ double VQM::clip(double f, double threshold){
 		return f;
 	return threshold;
 } 
+double VQM::calc_mean(float* arr, int len){
+	double mean = 0;
+	for(int i=0;i<len;i++){
+		mean += arr[i];
+	}
+	return mean/len;
+}
+double VQM::calc_sd(float* arr, int len){
+	double mean = calc_mean(arr,len);
+	double sd = 0;
+	for(int i=0;i<len;i++){
+		sd += (mean-arr[i])*(mean-arr[i]);
+	}
+	return sqrt(sd/(len-1));
+}
+double VQM::perc_thresh(double d, double t){
+	return (d < t ? t : d);
+}

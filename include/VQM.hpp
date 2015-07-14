@@ -94,7 +94,10 @@ class VQM: public Metric{
 		 *
 		 */
 		VQM(int);
-	private:
+	private:		
+		double perc_thresh(double, double);
+		double calc_mean(float*, int);
+		double calc_sd(float*, int);
 		/* (squared) euclidean distance of two points */
 		double euclideansq(double, double, double, double);
 		/* ratio comparison */
