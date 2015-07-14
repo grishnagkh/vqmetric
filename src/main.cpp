@@ -23,6 +23,7 @@
 #include "VideoCaptureReader.hpp"
 #include "PSNR.hpp"
 #include "SSIM.hpp"
+#include "VQM.hpp"
 
 int main(int ac, const char *av[]){
 
@@ -55,7 +56,9 @@ int main(int ac, const char *av[]){
 	// 2 seconds slices
 	int framesPerSlice = orig.getFps() * 0.2;
 
-	int nSlices = orig.getNFrames() / framesPerSlice; //testing
+//	int nSlices = orig.getNFrames() / framesPerSlice; //testing
+	int nSlices = 0;
+
 	if(orig.getNFrames() % framesPerSlice != 0){
 		nSlices++; 
 	}	
@@ -65,45 +68,53 @@ int main(int ac, const char *av[]){
 	PSNR psnr(nSlices);
 	SSIM ssim(nSlices);
 
+	VQM vqm(nSlices);
+	
+
+	cv::Mat inLum[framesPerSlice];
+	cv::Mat outLum[framesPerSlice];
 	cv::Mat in[framesPerSlice];
 	cv::Mat out[framesPerSlice];
-
-	cv::Mat tmp;	 
+	
+	cv::Mat tmp;	
 
 	for(int slice=0; slice<nSlices; slice++){
 
-//		std::cout << "Decompressing and converting videos of slice " << slice << endl;
+		std::cout << "Decompressing and converting videos of slice " << slice << endl;
 
-	//	clock_t before, after;
+		clock_t before, after;
 
-//		before = clock();
+		before = clock();
 
 		for(int i=0; i<framesPerSlice; i++){
-			orig.nextFrame(tmp);
-			tmp.convertTo(in[i], CV_32F);
-			processed.nextFrame(tmp);
-			tmp.convertTo(out[i], CV_32F);		
+			orig.nextFrame(in[i]);
+			in[i].convertTo(inLum[i], CV_32F);
+			processed.nextFrame(out[i]);
+			out[i].convertTo(outLum[i], CV_32F);		
 		}
+
 	
-//		after = clock();
-//		std::cout << "decompression and conversion finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
+		after = clock();
+		std::cout << "decompression and conversion finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
 
 // 		before = clock();
 //		std::cout << "calculating PSNR for slice " << slice << endl;
-		std::cout<< "PSNR for slice " << slice << ": " << psnr.compute(in, out, framesPerSlice) <<endl;
+		std::cout<< "PSNR for slice " << slice << ": " << psnr.compute(inLum, outLum, framesPerSlice) <<endl;
 //		after = clock();
 //		std::cout << "calculation of PSNR for slice " << slice << " finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
 
 //		before = clock();
 //		std::cout << "calculating SSIM for slice " << slice << endl;
-		std::cout<< "SSIM for slice " << slice << ": " << ssim.compute(in, out, framesPerSlice) <<endl;
+		std::cout<< "SSIM for slice " << slice << ": " << ssim.compute(inLum, outLum, framesPerSlice) <<endl;
 //		after = clock();		
 //		std::cout << "calculation of SSIM for slice " << slice << " finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
-	}
-	std::cout << "..............." << endl;
 
-	std::cout << "PSNR for all slices " << psnr.getMetricValue() << endl;
-	std::cout << "SSIM for all slices " << ssim.getMetricValue() << endl;
+		vqm.compute(in, out, framesPerSlice);
+	}
+	std::cout << "..............." << std::endl;
+
+	std::cout << "PSNR for all slices " << psnr.getMetricValue() << std::endl;
+	std::cout << "SSIM for all slices " << ssim.getMetricValue() << std::endl;
 
 	return 0;	
 }

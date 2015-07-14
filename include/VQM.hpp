@@ -18,8 +18,8 @@
  * MA 02110-1301 USA
  */
 
-#ifndef psnr_hpp
-#define psnr_hpp
+#ifndef vqm_hpp
+#define vqm_hpp
 
 #include "Metric.hpp"  
 #include <math.h>
@@ -103,6 +103,9 @@ class VQM: public Metric{
 		double logComp(double, double);
 		/* clip a number to a threshold*/
 		double clip(double, double); 
+		
+		double gain(double d);
+		double loss(double d);
 		
 };
 

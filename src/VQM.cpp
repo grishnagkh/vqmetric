@@ -49,13 +49,12 @@ VQM::VQM(int nSlices){
 		[ for readability and less error prone coding :) ]
 	(2) test si_loss, si_gain
 	(3) implement rest
-	(4) maybe only spatial collapse and we save each feature stream?
-
-	//meet br: i think the variance has to be calculated wrt all frames in 0.2s segment...
+	(4) maybe only spatial collapse and we save each feature 
 */
 double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	/* input: original frames */ 
-	
+std::cout << "starting vqm calculation" << std::endl;
+
 	/* 
 	 * luminance planes for 
 	 * 	si_loss, hv loss,hv gain, si gain, ct ati gain
@@ -63,139 +62,28 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	 * chroma planes for
 	 * 	chroma spread and chroma extreme
   	 */
+
 	cv::Mat lumO[nFrames], lumP[nFrames];
 	cv::Mat siO[nFrames], siP[nFrames];
 	cv::Mat hvO[nFrames], hvP[nFrames];
 	cv::Mat hvBarO[nFrames], hvBarP[nFrames];
 
-	cv::Mat siSdO[nFrames], siSdP[nFrames];
-	cv::Mat siSdOLoss[nFrames], siSdPLoss[nFrames];
-	cv::Mat siSdOGain[nFrames], siSdPGain[nFrames];
-
 	int h = orig[0].rows;
 	int w = orig[0].cols;
-	
-	/* kernel to calculate mean of a stdimx \times stdimy region*/
-	int stdimx = 8; /* kernel size x */
-	int stdimy = 8; /* kernel size y */
-	cv::Point anchor = cv::Point(-stdimx/2,-stdimy/2); 		/* anchor @ top left corner */
- 	/* the actual kernel*/
-	cv::Mat mean_kernel = cv::Mat::ones(stdimx, stdimy, CV_32F) /  (float)(stdimx*stdimy);
-	
-	/* temporary images */
-	cv::Mat t1, t2; 
-	/* a stream of compared images */
-	cv::Mat comparedFeatureStream[nFrames];
-	cv::Mat comparedFeatureStreamLoss[nFrames];
-	cv::Mat comparedFeatureStreamGain[nFrames];
 
-	/* array for extracted 8x8 grid values */
-	int slen = nFrames*(w/stdimx)*(h/stdimy);
-	double streamSILoss[slen];
-	double streamSIGain[slen];
-	
-	int cnt=0;
-	double thresh;
-
+std::cout << "[debug] transforming to cv32_f and calculating si, hv, and hvbar filters" << std::endl;
+	cv::Mat tmp;
 	for(int i=0; i<nFrames; i++){
+
 		orig[i].convertTo(lumO[i], CV_32F);
 		processed[i].convertTo(lumP[i], CV_32F);
-	 	/*  apply SI13 filter to each luminance plane */
+
+	 	/* [si_loss (1)] apply SI13 filter to each luminance plane */
+		/* [hv_loss (1)] apply the HV and HVBAR perceptual filters to each luminance plane. */
 		filter_si_hv_bar(lumO[i], siO[i], hvBarO[i], hvO[i], 13);
 		filter_si_hv_bar(lumP[i], siP[i], hvBarP[i], hvP[i], 13);	
-
-	//maybe i fucked up the st region split.. so leave this code as template for now...
-		/* [si:loss (3) ] Compute the standard deviation of each S-T region */
-/*	
-		filter2D(siO[i], t1, -1 , mean_kernel, anchor ); //E(X)
-		filter2D(siO[i].mul(siO[i]), t2, -1 , mean_kernel, anchor ); // E(X^2)
-		cv::sqrt(t2 - t1.mul(t1), siSdO[i]); // var(X) = E(X^2) - [E(X)]^2
-
-		filter2D(siP[i], t1, -1 , mean_kernel, anchor ); //E(X)
-		filter2D(siP[i].mul(siP[i]), t2, -1 , mean_kernel, anchor ); // E(X^2)
-		cv::sqrt(t2 - t1.mul(t1), siSdP[i]); // var(X) = E(X^2) - [E(X)]^2
-		
-		/*  [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/	
-/*		
-		thresh = 12;
-		cv::threshold(siSdO[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 12, 0 otherwise
-		cv::threshold(siSdO[i], siSdOLoss[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 12
-		siSdOLoss[i] = siSdOLoss[i] + thresh*t1; // add 12 if v<12
-
-		cv::threshold(siSdP[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 12
-		cv::threshold(siSdP[i], siSdPLoss[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 12
-		siSdPLoss[i] = siSdPLoss[i] + thresh*t1; // add 12 if v<12
-
-		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */
-/*		thresh = 8;
-
-		cv::threshold(siSdP[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 8
-		cv::threshold(siSdP[i], siSdPGain[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 8
-		siSdPGain[i] = siSdPGain[i] + thresh*t1; // add 8 if v<8	
-
-		cv::threshold(siSdO[i], t1, thresh, 1, CV_THRESH_BINARY_INV); // 1 if v < 8
-		cv::threshold(siSdO[i], siSdOGain[i], thresh, -1, CV_THRESH_TOZERO); //clear if  v < 8
-		siSdOGain[i] = siSdOGain[i] + thresh*t1; // add 8 if v<8	
-
-		/* [si_loss (5)] compare original and processed feature streams using ratio comparison function followed by loss function */	
-/*		cv::divide(siSdPLoss[i] - siSdOLoss[i], siSdOLoss[i], comparedFeatureStream[i]); 	//ratio compare
-	
-		/* loss function */ 
-/*		cv::threshold(comparedFeatureStreamLoss[i], comparedFeatureStreamLoss[i], 0, -1, CV_THRESH_TOZERO_INV);		
-		
-		/* [si_gain (3) ] compare original and processed feature streams using log comparison function followed by gain function*/ 
-		
-
-		/* log comparison: log10(processed/orig) */
-		// = ln(processed/orig)/ln(10) ; ln(10) ~ 2.30258509299
-/*		cv::log(siSdOGain[i],t1); //ln(o)
-		cv::log(siSdPGain[i],t2); //ln(p)
-		cv::subtract(t2, t1, comparedFeatureStreamGain[i]); //ln(p/o) = ln(p) - ln(o)
-		comparedFeatureStreamGain[i] /= 2.30258509299; //log10(p/o)
-
-		/* gain function */
-	/*	cv::threshold(comparedFeatureStreamGain[i], comparedFeatureStreamGain[i], 0, -1, CV_THRESH_TOZERO);
-
-
-		/* extract 8x8 grid for si_loss*/
-/*		for(int y=0; y<h; y+=stdimy){
-			for(int x=0; x<w; x+=stdimx){
-				streamSIGain[cnt] = comparedFeatureStreamGain[i].at<float>(x,y);				
-				streamSILoss[cnt++] = comparedFeatureStreamLoss[i].at<float>(x,y);
-			}
-		}
-
-*/	}
- 
-	/* [si_loss (6)] spatially collapse by computing the average of the worst (i.e. most impaired) 5% of S-T blocks for each 0.2 second slice of time */	
-/*
-	std::sort(streamSILoss, streamSILoss+sizeof(streamSILoss)/sizeof(streamSILoss[0]));
-	int until = slen*.05;
-	double si_avg = 0;
-	for(int i=0; i<until; i++){ 
-		si_avg += streamSILoss[i];
 	}
-	si_avg /= until;	
-
-	si_loss[actSlice] = si_avg;
-
-		
-	/* 
-	 * [si_gain (4) ] spatially and temporally collapse by computing the average of all block and the clip at a minimum value of 0.004
-	 * [si_gain (5) ] set all values greater than 0.14 to 0.14
-	 */
-
-		//discussion: 4/5 are shifted partially into timecollapse or getmetricvalue
-		//for now we only spatially collapse for a 0.2 second block
-/*	double si_gain_avg = 0;
-	for(int i=0; i<slen; i++){ 
-		si_gain_avg += streamSIGain[i];
-	}
-	si_gain_avg /= slen;		
-	si_gain[actSlice] = si_gain_avg; 
-	/* si_gain now contains the spatially collapsed 0.2second block collapsed time slice */
-
-
+std::cout << "[debug] transformation to cv32_f and calculating si, hv, and hvbar filters ended" << std::endl;
 
 
 	/* split S-T regions, assuming that we are given a single time slice with nFrames */
@@ -204,36 +92,380 @@ double VQM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	int nRegions = w / rW * h / rH;
 	int elemPerRegion = rW*rH*nFrames;
 
+
 	int region;
 	int idx;
-	float siRegP[nRegions][elemPerRegion];
-	float siRegO[nRegions][elemPerRegion];
-	
+
+	float** siRegO = new float*[nRegions];
+	float** siRegP = new float*[nRegions];
+	float** hvRegO = new float*[nRegions];
+	float** hvRegP = new float*[nRegions];
+	float** hvBarRegO = new float*[nRegions];
+	float** hvBarRegP = new float*[nRegions];
+
+	for(int i=0; i<nRegions; i++){
+		siRegO[i] = new float[elemPerRegion];
+		siRegP[i] = new float[elemPerRegion];
+		hvRegO[i] = new float[elemPerRegion];
+		hvRegP[i] = new float[elemPerRegion];
+		hvBarRegO[i] = new float[elemPerRegion];
+		hvBarRegP[i] = new float[elemPerRegion];
+	}
+
 	region = 0;
-	for(int y=0; y<h; y+=rH){
-		for(int x=0; x<w; x+=rW){
+	int idxX, idxY;
+
+std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << elemPerRegion << " elements per region" << std::endl;
+
+	/* [si_loss(2), hv_loss (2)] Divide each of the SI, HV and HVBAR video sequences into 8 pixel x 8 line x 0.2 second S-T regions. */
+
+	for(int y=0; y<h/rH; y++){
+		for(int x=0; x<w/rW; x++){
 			// each region
 			idx = 0;
 			for(int i=0; i<nFrames; i++){
+	
 				//each input frame 
 				for(int dy=0; dy<rH; dy++){
 					for(int dx=0; dx<rW; dx++){
 						//8x8 window
-						siRegO[region][idx] = siO[i].at<float>(x+dx,y+dy);
-						siRegP[region][idx] = siP[i].at<float>(x+dx,y+dy);
+						idxX = rW*x+dx;
+						idxY = rH*y+dy;
+						siRegO[region][idx] = siO[i].at<float>(idxX, idxY);
+						siRegP[region][idx] = siP[i].at<float>(idxX, idxY);
+						hvRegO[region][idx] = hvO[i].at<float>(idxX, idxY);
+						hvRegP[region][idx] = hvP[i].at<float>(idxX, idxY);
+						hvBarRegO[region][idx] = hvBarO[i].at<float>(idxX, idxY);
+						hvBarRegP[region][idx] = hvBarP[i].at<float>(idxX, idxY);
+
 						idx++;
-					}
+					}	
 				}
 			}
 			region++;
 		}
 	}
 
-	//TODO... 
+	double meanO = 0;
+	double meanP = 0;
+	double tmpO = 0;
+	double tmpP = 0;
+
+	double sdO;
+	double sdP;
+
+	double fs_si_loss[nRegions]; /* si loss feature stream */
+	double fs_si_gain[nRegions];
+	double fs_hv_loss[nRegions]; /* hv loss feature stream */
+	double fs_hv_gain[nRegions];
+	
+	double thresh = 0;
+
+	double hvmeanO = 0;
+	double hvbarmeanO = 0;
+	double hvmeanP = 0;
+	double hvbarmeanP = 0;
+	double hvratioO = 0;
+	double hvratioP = 0;
+
+	for(int reg=0; reg < nRegions; reg++){
+		/* [hv_loss (3)] Compute the mean of each S-T region. */
+		/* [si:loss (3) ] Compute the standard deviation of each S-T region */
+		meanO = 0;
+		meanP = 0;
+		hvmeanO = 0;
+		hvmeanP = 0;
+		hvbarmeanO = 0;
+		hvbarmeanP = 0;
+
+		for(int elem=0; elem < elemPerRegion; elem++){
+			meanO += siRegO[reg][elem];
+			meanP += siRegP[reg][elem];
+			hvmeanO += hvRegO[reg][elem];
+			hvmeanP += hvRegP[reg][elem];
+			hvbarmeanO += hvBarRegO[reg][elem];
+			hvbarmeanP += hvBarRegP[reg][elem];
+		}	
+		meanO /= elemPerRegion;
+		meanP /= elemPerRegion;
+
+		hvmeanO /= elemPerRegion;
+		hvmeanP /= elemPerRegion;
+		hvbarmeanO /= elemPerRegion;
+		hvbarmeanP /= elemPerRegion;
+
+		for(int elem = 0; elem < elemPerRegion; elem++){
+			tmpO += (meanO - siRegO[reg][elem])*(meanO - siRegO[reg][elem]);
+			tmpP += (meanP - siRegP[reg][elem])*(meanP - siRegP[reg][elem]);
+		}
+		tmpO = sqrt(tmpO/(elemPerRegion-1));
+		tmpP = sqrt(tmpP/(elemPerRegion-1));
+		/* [si_loss (4)] apply a perceptability threshold, replacing values less than 12 with 12*/	
+		thresh = 12;
+		sdO = tmpO < thresh ? thresh : tmpO;			
+		sdP = tmpP < thresh ? thresh : tmpP;		
+
+		/* [si_loss (5)] compare original and processed feature streams using ratio comparison function followed by loss function */
+		fs_si_loss[reg] = loss(ratioComp(sdO, sdP));
+
+//std::cout<<"[debug] sdO: " << sdO << ", sdP: " << sdP  << ", fs: " <<	fs_si_loss[reg]  <<std::endl;
+		
+		/* [si_gain (1) ] si_loss 1..3 -> results in tmpO, tmpP */
+		/* [si_gain (2) ] apply a perceptability threshold, replacing values less than 8 with 8 */
+		thresh = 8;
+		sdO = tmpO < thresh ? thresh : tmpO;			
+		sdP = tmpP < thresh ? thresh : tmpP;						
+		/* [si_gain (3) ] compare original and processed feature streams using log comparison function followed by gain function*/ 
+		fs_si_gain[reg] = gain(logComp(sdO, sdP));
+
+		/* [hv_loss (4)] Apply a perceptibility threshold, replacing values less than 3 with 3. */
+		thresh = 3;
+		hvmeanO = hvmeanO < thresh ? thresh : hvmeanO;	
+		hvmeanP = hvmeanP < thresh ? thresh : hvmeanP;	
+		hvbarmeanO = hvbarmeanO < thresh ? thresh : hvbarmeanO;	
+		hvbarmeanP = hvbarmeanP < thresh ? thresh : hvbarmeanP;	
+		/* [hv_loss (5)] Compute the ratio (HV / HVBAR). */
+		hvratioO = hvmeanO / hvbarmeanO;
+		hvratioP = hvmeanP / hvbarmeanP;
+		/* [hv_loss(6)] Compare original and processed feature streams (each computed using steps 1 through 5) using the ratio comparison function (see equation 3) followed by the loss function. */		
+		fs_hv_loss[reg] = loss(ratioComp(hvratioO, hvratioP));
+		/* [hv_gain (2)] Compare original and processed feature streams using the log comparison function (see equation 4) followed by the gain function.*/
+		fs_hv_gain[reg] = gain(logComp(hvratioO, hvratioP));
+//std::cout << "hvgain "<<fs_hv_gain[reg] <<std::endl;
+	}	
+	
+
+
+	/* [hv_gain (3)] Spatially collapse by computing the average of the worst 5% of blocks for each 0.2 second slice of time. */
+	/* [hv_gain (4)] Temporally collapse by taking the mean over all time slices. 	TODO: timecollapse*/ 
+	
+	std::sort(fs_hv_gain, fs_hv_gain+sizeof(fs_hv_gain)/sizeof(fs_hv_gain[0]));
+	int until = nRegions * .05;
+	double avg = 0;
+	for(int i=0; i<until; i++){ 
+		 avg += fs_hv_gain[i];
+	}
+	avg /= until;	
+	hv_gain[actSlice] = avg;
+std::cout<<"[debug] hv_gain for slice " << actSlice <<" : "<< hv_gain[actSlice] << std::endl; 
+
+
+
+	/* hv_loss
+			(7) Spatially collapse by computing the average of the worst 5% of blocks for each 0.2 second slice of time.*/
+	std::sort(fs_hv_loss, fs_hv_loss+sizeof(fs_hv_loss)/sizeof(fs_hv_loss[0]));
+	until = nRegions * .05;
+	avg = 0;
+	for(int i=0; i<until; i++){ 
+		 avg += fs_hv_loss[i];
+	}
+	avg /= until;	
+	hv_loss[actSlice] = avg;
+
+std::cout<<"[debug] hv_loss for slice " << actSlice <<" : "<< hv_loss[actSlice] << std::endl; 
+/* hv_loss
+				(8) Temporally collapse by taking the mean over all time slices. //TODO: timecollapse / getMetricValue
+				(9) Square the parameter (i.e., non-linear scaling), and clip at a minimum value of 0.06 (see equation 5).  //TODO: timecollapse / getMetricValue
+	*/
+
+
+	
+	/* [si_loss (6)] spatially collapse by computing the average of the worst (i.e. most impaired) 5% of S-T blocks for each 0.2 second slice of time */	
+	std::sort(fs_si_loss, fs_si_loss+sizeof(fs_si_loss)/sizeof(fs_si_loss[0]));
+	until = nRegions * .05;
+	avg = 0;
+	for(int i=0; i<until; i++){ 
+		avg += fs_si_loss[i];
+	}
+
+	avg /= until;	
+	si_loss[actSlice] = avg;
+
+std::cout<<"[debug] si_loss for slice " << actSlice <<" : "<< si_loss[actSlice] << std::endl; 
+
+	/* 
+	 * [si_gain (4) ] spatially and temporally collapse by computing the average of all block and the clip at a minimum value of 0.004
+	 * [si_gain (5) ] set all values greater than 0.14 to 0.14
+	 */
+
+	avg = 0;
+	for(int i=0; i<nRegions; i++){ 
+		avg += fs_si_gain[i];
+	}
+
+	avg /= nRegions;	
+	si_gain[actSlice] = avg; 
+	/* rest of 4 and 5 tbd in temporal collapse, maybe we should store here how much frames went into the calculation?= TODO*/
+
+std::cout<<"[debug] si_gain for slice " << actSlice <<" : "<< si_gain[actSlice] << std::endl; 
+	
+	/*	[ct_ati_gain (2)] Divide each video sequence into 4 pixel x 4 line x 0.2 second S-T regions. */
+
+	rW = 4;
+	rH = 4;
+	nRegions = w / rW * h / rH;
+	elemPerRegion = rW*rH*(nFrames-1);
+
+std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << elemPerRegion << " elements per region" << std::endl;
+
+	double fs_ati_gain[nRegions];
+
+	region = 0;
+	idx = 0;
+
+	float** atiRegO = new float*[nRegions];
+	float** atiRegP = new float*[nRegions];
+	float** lumRegO = new float*[nRegions];
+	float** lumRegP = new float*[nRegions];
+
+	for(int i=0; i<nRegions; i++){
+		atiRegO[i] = new float[elemPerRegion];
+		atiRegP[i] = new float[elemPerRegion];
+		lumRegO[i] = new float[elemPerRegion];
+		lumRegP[i] = new float[elemPerRegion];
+	}
+
+	for(int y=0; y<h/rH; y++){
+		for(int x=0; x<w/rW; x++){
+			// each region
+			idx = 0;
+			for(int i=0; i<(nFrames-1); i++){ //we have a picture less here
+				//each input frame 
+				for(int dy=0; dy<rH; dy++){
+					for(int dx=0; dx<rW; dx++){						
+						idxX = rW*x+dx;
+						idxY = rH*y+dy;
+						/*	[ct_ati_gain (1)] Apply the “absolute value of temporal information” (ATI) motion detection filter to each luminance plane. 
+						ATI is the absolute value of a pixel-by-pixel difference between
+						the current and previous video frame. */
+						atiRegO[region][idx] =  abs(lumO[i].at<float>(idxX, idxY) - lumO[i+1].at<float>(idxX, idxY));
+						atiRegP[region][idx] =  abs(lumP[i].at<float>(idxX, idxY) - lumP[i+1].at<float>(idxX, idxY));
+						lumRegO[region][idx] =  lumO[i+1].at<float>(idxX, idxY);
+						lumRegP[region][idx] =  lumP[i+1].at<float>(idxX, idxY);				
+
+						idx++;
+					}	
+				}
+			}
+			region++;
+		}
+	}	
+
+	/*	[ct_ati_gain (3)] Compute the standard deviation of each S-T region. */
+	double meanatiRegO, meanatiRegP, meanlumRegO, meanlumRegP;
+	double sdatiRegO, sdatiRegP, sdlumRegO, sdlumRegP;
+
+	for(int reg=0; reg < nRegions; reg++){
+		meanatiRegO = 0;
+		meanatiRegP = 0;
+		meanlumRegO = 0;
+		meanlumRegP = 0;
+
+		sdatiRegO = 0;
+		sdatiRegP = 0;
+		sdlumRegO = 0;
+		sdlumRegP = 0;
+
+		for(int elem=0; elem < elemPerRegion; elem++){
+			meanatiRegO += atiRegO[reg][elem];
+			meanatiRegP += atiRegP[reg][elem];
+			meanlumRegO += lumRegO[reg][elem];
+			meanlumRegP += lumRegP[reg][elem];
+		}
+
+		meanatiRegO /= elemPerRegion;
+		meanatiRegP /= elemPerRegion;
+		meanlumRegO /= elemPerRegion;
+		meanlumRegP /= elemPerRegion;
+
+
+
+//std::cout << meanatiRegO << "," << meanatiRegP << "," << meanlumRegO << "," << meanlumRegP << "|";
+
+		for(int elem = 0; elem < elemPerRegion; elem++){
+			sdatiRegO += (meanatiRegO - atiRegO[reg][elem])*(meanatiRegO - atiRegO[reg][elem]);
+			sdatiRegP += (meanatiRegP - atiRegP[reg][elem])*(meanatiRegP - atiRegP[reg][elem]);
+			sdlumRegO += (meanlumRegO - lumRegO[reg][elem])*(meanlumRegO - lumRegO[reg][elem]);
+			sdlumRegP += (meanlumRegP - lumRegP[reg][elem])*(meanlumRegP - lumRegP[reg][elem]);
+		}
+		sdatiRegO = sqrt(sdatiRegO/(elemPerRegion-1));
+		sdatiRegP = sqrt(sdatiRegP/(elemPerRegion-1));
+		sdlumRegO = sqrt(sdlumRegO/(elemPerRegion-1));
+		sdlumRegP = sqrt(sdlumRegP/(elemPerRegion-1));
+
+		/*	[ct_ati_gain (4)] Apply a perceptibility threshold, replacing values less than 3 with 3. */
+		thresh = 3;
+		sdatiRegO = sdatiRegO < thresh ? thresh : sdatiRegO;			
+		sdatiRegP = sdatiRegP < thresh ? thresh : sdatiRegP;	
+		sdlumRegO = sdlumRegO < thresh ? thresh : sdlumRegO;			
+		sdlumRegP = sdlumRegP < thresh ? thresh : sdlumRegP;	
+		/*	[ct_ati_gain (5)] Repeat steps 2 through 4 on the Y luminance video sequence (without perceptual filtering) to form “contrast” feature streams. */	
+		/*	[ct_ati_gain (6)] Multiply the contrast and ATI feature streams. */
+		/*	[ct_ati_gain (7)] Compare original and processed feature streams (each computed using steps 1 through 6) using the ratio comparison function (see equation 3) followed by the gain function. */
+		fs_ati_gain[reg] = gain(ratioComp(sdatiRegO * sdlumRegO, sdatiRegP * sdlumRegP));
+//std::cout << "[debug] non-deterministic sdatiRegO: "<< sdatiRegO  <<std::endl;
+//std::cout << "[debug] non-deterministic sdlumRegO: "<< sdlumRegO  <<std::endl;
+//std::cout << "[debug] non-deterministic sdatiRegP: "<< sdatiRegP  <<std::endl;
+//std::cout << "[debug] non-deterministic sdlumRegP: "<< sdlumRegP  <<std::endl;
+
+//std::cout << fs_ati_gain[reg] << "|";
+	}
+
+
+/*	[ct_ati_gain (8)] Spatially collapse by computing the mean of each 0.2 second slice of time. */
+	avg = 0;
+	for(int i=0; i<nRegions; i++){ 
+		avg += fs_ati_gain[i];
+	}
+	avg /= nRegions;
+	ct_ati_gain[actSlice] = avg; 
+
+
+
+//std::cout << "[debug] length of fs_ati_gain VS nRegions" << std::endl;
+//std::cout << "[debug] " << sizeof(fs_ati_gain)/sizeof(fs_ati_gain[0]) << " VS " << nRegions << std::endl;
+
+/*	[ct_ati_gain (9)] Temporally collapse by sorting values in time and selecting the 10% level. The parameter values are all positive, so this temporal collapsing function is a form of best-case processing, detecting impairments that are nearly always present. */
+
+std::cout<<"[debug] ct_ati_gain for slice " << actSlice <<" : "<< ct_ati_gain[actSlice] << std::endl; 
+
+
+/*
+TODO
+chroma_spread
+			(1) Divide the CB and CR color planes into separate 8 pixel x 8 line x 1 frame S-T regions.
+			(2) Compute the mean of each S-T region. Multiple the CR means by 1.5 to increase the perceptual weighting of the red color component in the next step.
+			(3) Compare original and processed feature streams CB and CR using Euclidean distance (see equation 2).
+			(4) Spatially collapse by computing the standard deviation of blocks for each 1-frame slice of time.
+			(5) Temporally collapse by sorting the values in time and selecting the 10% level, and then clip at a minimum value of 0.6. Since all values are positive, this represents a bestcase 	processing temporally. Thus, chroma_spread measures color impairments that are nearly always present
+*/
+
+
+/*
+TODO
+chroma_extreme
+
+	(1) Perform steps 1 through 3 from chroma_spread.
+	(2) Spatially collapse by computing for each slice of time the average of the worst 1% of blocks (i.e., rank-sorted values from the 99% level to the 100% level), and subtract from that result the 99% level. This identifies very bad distortions that impact a small portion of the image.
+	(3) Temporally collapse by computing standard deviation of the results from step 2
+
+*/
+
+
 
 	actSlice++;	
 
 	return -1;
+}
+double VQM::loss(double d){
+	if(d>0) 
+		return 0;
+	return d;
+}
+double VQM::gain(double d){
+	if(d<0) 
+		return 0;
+	return d;
 }
 
 double VQM::timeCollapse(){

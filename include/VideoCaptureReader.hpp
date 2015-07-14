@@ -35,10 +35,12 @@ class VideoCaptureReader: public VideoReader{
 	cv::VideoCapture cap;
 	public:  
 		bool nextFrame(cv::Mat&);
+
 		int getFps();
 		int getVideoWidth();
 		int getVideoHeight();
 		int getNFrames();
+		
 		std::string getVideoFilePath();
 		VideoCaptureReader(string x):VideoReader(x)
 			{
