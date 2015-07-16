@@ -55,13 +55,101 @@ std::cout << "starting vqm calculation" << std::endl;
 	int h = orig[0].rows;
 	int w = orig[0].cols;
 
+
+/*
+TODO
+chroma_spread
+			(1) Divide the CB and CR color planes into separate 8 pixel x 8 line x 1 frame S-T regions.
+			(2) Compute the mean of each S-T region. Multiple the CR means by 1.5 to increase the perceptual weighting of the red color component in the next step.
+			(3) Compare original and processed feature streams CB and CR using Euclidean distance (see equation 2).
+			(4) Spatially collapse by computing the standard deviation of blocks for each 1-frame slice of time.
+			(5) Temporally collapse by sorting the values in time and selecting the 10% level, and then clip at a minimum value of 0.6. Since all values are positive, this represents a bestcase 	processing temporally. Thus, chroma_spread measures color impairments that are nearly always present
+*/
+
+//orig, processed are the original image sequences
+
+
+
+	/* kernel to calculate mean of a stdimx \times stdimy region*/
+	int stdimx = 8; /* kernel size x */
+	int stdimy = 8; /* kernel size y */
+	cv::Point anchor = cv::Point(0,0); 		/* anchor @ top left corner */
+	/* the actual kernel*/
+	cv::Mat mean_kernel = cv::Mat::ones(stdimx, stdimy, CV_32F) /  (float)(stdimx*stdimy);
+	cv::Mat exo, ex2o;
+	cv::Mat exp, ex2p;
+	cv::Mat varxo, sdxo;
+	cv::Mat varxp, sdxp;
+cv::Mat ochannels[3];
+cv::Mat pchannels[3];
+
+
+	float chromafeature[nFrames*w/stdimx*h/stdimy];
+int countaeeeer = 0;
+	for(int i=0; i<nFrames; i++){
+			/*	(1) Divide the CB and CR color planes into separate 8 pixel x 8 line x 1 frame S-T regions. */
+cv::cvtColor(orig[i], orig[i], CV_BGR2YCrCb);//debug later
+cv::cvtColor(processed[i], processed[i], CV_BGR2YCrCb);//debug later
+
+cv::split( orig[i], ochannels ); 
+cv::split( processed[i], pchannels ); 
+lumO[i] = ochannels[0];
+lumP[i] = pchannels[0];
+
+			/* (2) Compute the mean of each S-T region. Multiple the CR means by 1.5 to increase the perceptual weighting of the red color component in the next step. */
+		cv::filter2D(orig[i], exo, -1 , mean_kernel, anchor ); //E(Xo)
+		cv::filter2D(processed[i], exp, -1 , mean_kernel, anchor ); //E(Xp)
+		cv::filter2D(orig[i].mul(orig[i]), ex2o, -1 , mean_kernel, anchor ); //E(Xo^2)
+		cv::filter2D(processed[i].mul(processed[i]), ex2p, -1 , mean_kernel, anchor ); //E^2(Xp^2)
+		varxo = ex2o - exo.mul(exo);
+		varxp = ex2p - exp.mul(exp);
+
+cv::split( exo, ochannels ); 
+cv::split( exp, pchannels ); 
+ochannels[1].mul(1.5);
+pchannels[1].mul(1.5);
+
+			/*	(3) Compare original and processed feature streams CB and CR using Euclidean distance (see equation 2). */
+		
+float cro, crp, cbo, cbp;
+int xpos, ypos;
+for(int y=0; y<h/stdimy; y++){
+	for(int x=0; x<w/stdimx; x++){					
+		xpos = stdimx*x;
+		ypos = stdimy*y;
+		cro = ochannels[1].at<float>(xpos, ypos);
+		cbo = ochannels[2].at<float>(xpos, ypos);
+		crp = pchannels[1].at<float>(xpos, ypos);
+		cbp = pchannels[2].at<float>(xpos, ypos);
+		chromafeature[countaeeeer++] = sqrt(euclideansq(cro, cbo, crp, cbp)); //we want the sqrt here i think..  and i hope that's right :D :D :D just check it in this way...
+
+	}
+}
+	}
+	
+
+// var(X) = E(X^2) - [E(X)]^2
+
+/*
+TODO
+chroma_extreme
+
+	(1) Perform steps 1 through 3 from chroma_spread.
+	(2) Spatially collapse by computing for each slice of time the average of the worst 1% of blocks (i.e., rank-sorted values from the 99% level to the 100% level), and subtract from that result the 99% level. This identifies very bad distortions that impact a small portion of the image.
+	(3) Temporally collapse by computing standard deviation of the results from step 2 //this is meant over the whole video, so we must think of something ...
+
+*/
+
+
+
+
+
+
 std::cout << "[debug] transforming to cv32_f and calculating si, hv, and hvbar filters" << std::endl;
 	cv::Mat tmp;
 	for(int i=0; i<nFrames; i++){
-
-		orig[i].convertTo(lumO[i], CV_32F);
-		processed[i].convertTo(lumP[i], CV_32F);
-
+	lumO[i].convertTo(lumO[i], CV_32F);
+	lumP[i].convertTo(lumP[i], CV_32F);
 	 	/* [si_loss (1)] apply SI13 filter to each luminance plane */
 		/* [hv_loss (1)] apply the HV and HVBAR perceptual filters to each luminance plane. */
 		filter_si_hv_bar(lumO[i], siO[i], hvBarO[i], hvO[i], 13);
@@ -309,26 +397,6 @@ std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << el
 std::cout<<"[debug] ct_ati_gain for slice " << actSlice <<" : "<< ct_ati_gain[actSlice] << std::endl; 
 
 
-/*
-TODO
-chroma_spread
-			(1) Divide the CB and CR color planes into separate 8 pixel x 8 line x 1 frame S-T regions.
-			(2) Compute the mean of each S-T region. Multiple the CR means by 1.5 to increase the perceptual weighting of the red color component in the next step.
-			(3) Compare original and processed feature streams CB and CR using Euclidean distance (see equation 2).
-			(4) Spatially collapse by computing the standard deviation of blocks for each 1-frame slice of time.
-			(5) Temporally collapse by sorting the values in time and selecting the 10% level, and then clip at a minimum value of 0.6. Since all values are positive, this represents a bestcase 	processing temporally. Thus, chroma_spread measures color impairments that are nearly always present
-*/
-
-
-/*
-TODO
-chroma_extreme
-
-	(1) Perform steps 1 through 3 from chroma_spread.
-	(2) Spatially collapse by computing for each slice of time the average of the worst 1% of blocks (i.e., rank-sorted values from the 99% level to the 100% level), and subtract from that result the 99% level. This identifies very bad distortions that impact a small portion of the image.
-	(3) Temporally collapse by computing standard deviation of the results from step 2
-
-*/
 	actSlice++;	
 
 	return -1;
