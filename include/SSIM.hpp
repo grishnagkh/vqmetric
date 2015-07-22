@@ -29,10 +29,8 @@
 
 class SSIM: public Metric{
 
-	int* nProcessed;
-	double* values; 
-	int actSlice;
-	int nSlices;
+	std::vector<int> nProcessed; 
+	std::vector<double> values; 
 	std::string logfile_path;
 	int loglevel;
 
@@ -51,7 +49,7 @@ class SSIM: public Metric{
 		/*
 		 * Constructor, param: number of slices
 		 */
-		SSIM(int, std::string, int);
+		SSIM(std::string, int);
 	private:
 		/* 
 		 * Computes SSIM Value for a pair of images. 

@@ -37,9 +37,9 @@ int printUsage(){
 }
 
 /* 
- * Sample call
+ * Sample call 
  *
- * 	./main --psnr --ssim --source source --reference reference --source-format mp4 --reference-format yuv420 --output pedantic --scaling bicubic output 
+ * 	./main -p 500.mp4 -r 1000.mp4 --psnr --ssim out
  *
  */
 
@@ -52,7 +52,7 @@ int main(int argc, char **argv){
 	int ssim_flag = 0;
 	int vqm_flag = 0;
 
-	string source, reference, sourcefmt, reffmt, outputmode, scaling, out_prefix;
+	string processed, reference, procfmt, reffmt, outputmode, scaling, out_prefix;
 	
 	//TODO: segment length parameter
 	while (1){
@@ -62,9 +62,9 @@ int main(int argc, char **argv){
 			  {"vqm",  no_argument, &vqm_flag , 1},
  			 /* These options don’t set a flag.
 				 We distinguish them by their indices. */
-			  {"source",  			required_argument,	0, 's'}, // path to source file
+			  {"processed",  		required_argument,	0, 'p'}, // path to source file
 			  {"reference",  		required_argument, 	0, 'r'}, // path to reference file
-			  {"source-format",  	required_argument, 	0, 'S'}, // try to estimate by file ending
+			  {"processed-format",  required_argument, 	0, 'P'}, // try to estimate by file ending
 			  {"reference-format",  required_argument,  0, 'R'}, // try to estimate by file ending
 			  {"output",  			required_argument, 	0, 'o'}, // standard, extended, pedantic
 			  {"scaling",  			required_argument, 	0, 'c'}, // lanczos, bicubic scaling
@@ -73,7 +73,7 @@ int main(int argc, char **argv){
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "s:r:S:R:o:m:c:",
+		c = getopt_long (argc, argv, "p:r:R:P:o:c:",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -83,24 +83,19 @@ int main(int argc, char **argv){
 			case 0:
 				/* If this option set a flag, do nothing else now. */				
 				break;
-			case 's':
-				std::cout << "source file: " << optarg << std::endl;
-				source = optarg;
+			case 'p':
+				processed = optarg;
 				break;
 			case 'r':
-				std::cout << "reference file: " << optarg << std::endl;
 				reference = optarg;
 				break;
-			case 'S':
-				std::cout << "source format: " << optarg << std::endl;
-				sourcefmt = optarg;
+			case 'P':
+				procfmt = optarg;
 				break;
 			case 'R':
-				std::cout << "reference format: " << optarg << std::endl;
 				reffmt = optarg;
 				break;
 			case 'o':
-				std::cout << "output mode: " << optarg << std::endl;
 				outputmode = optarg;
 				break;		
 			case 'c':
@@ -112,9 +107,9 @@ int main(int argc, char **argv){
 	if (optind < argc){
 		out_prefix = argv[optind];
 	}else{
-		out_prefix = "out_";
+		out_prefix = "out";
 	}
-	std::cout << "output file prefix: " << out_prefix << std::endl;
+//	std::cout << "output file prefix: " << out_prefix << std::endl;
 
 	std::cout << "flags" 			   << std::endl;	
 	std::cout << "\tpsnr: " << psnr_flag << std::endl;
@@ -123,96 +118,78 @@ int main(int argc, char **argv){
 
 /* option parsing end */
 
-	VideoReader *orig, *processed;
+	VideoReader *rR, *pR;
+	
+	 
+	VideoCaptureReader o(reference);
+	rR = &o;
+	 
+	VideoCaptureReader p(processed);
+	pR = &p;
+	 
 
-	Y4MReader y4mreader("test.y4m");
-cv::Mat readFrame;
-exit(0);	
-
-	VideoCaptureReader o(source);
-	VideoCaptureReader p(reference);
-
-	orig = &o;
-	processed = &p;
-
-	if(orig->getFps() != processed->getFps()){
+	if(rR->getFps() != pR->getFps()){
 		std::cout << "original and processed video have different frame rates, we abort here";
 		return -1;
 	}
-	if(orig->getNFrames() != processed->getNFrames()){
+	if(rR->getNFrames() != pR->getNFrames()){
 		std::cout << "original and processed video have different number of frames, we abort here";
 		return -1;
 	}
-	if(orig->getVideoWidth() != processed->getVideoWidth()){
+	if(rR->getVideoWidth() != pR->getVideoWidth()){
 		std::cout << "original and processed video have different widths, we abort here";
 		std::cout << " (scaling not implemented yet)";
 		return -1;
 	}
-	if(orig->getVideoHeight() != processed->getVideoHeight()){
+	if(rR->getVideoHeight() != pR->getVideoHeight()){
 		std::cout << "original and processed video have different heights, we abort here";
 		std::cout << " (scaling not implemented yet)";
 		return -1;
 	}
 	
-	
 	// process .2 seconds slices 
-	int framesPerSlice = orig->getFps() * 0.2;
-
-	int nSlices = orig->getNFrames() / framesPerSlice;
-
-
-	if(orig->getNFrames() % framesPerSlice != 0){
-		nSlices++; 
-	}	
-
-	std::cout << "Splitting calculation in " << nSlices << " 0.2second slices with " << framesPerSlice << " frames" << std::endl;
-
+	int framesPerSlice = rR->getFps() * 0.2; 
+std::cout << framesPerSlice << " frames per slice" << std::endl;
 	/* delete output files if they already exist */
 	remove( (out_prefix + "_psnr").c_str() ); 
 	remove( (out_prefix + "_ssim").c_str() ); 
 	remove( (out_prefix + "_vqm").c_str() ); 
 
+//reserving for 10000 slices,.,, later we will rertie to vectors 
+	PSNR psnr(out_prefix + "_psnr", 1);
+	SSIM ssim(out_prefix + "_ssim", 1);
 
-
-	PSNR psnr(nSlices, out_prefix + "_psnr", 1);
-	SSIM ssim(nSlices, out_prefix + "_ssim", 1);
-
-	VQM vqm(nSlices, orig->getNFrames());
-	
+	VQM vqm(10000, 12000); //just until we have vectors
 
 	cv::Mat inLum[framesPerSlice];
 	cv::Mat outLum[framesPerSlice];
 	cv::Mat in[framesPerSlice];
 	cv::Mat out[framesPerSlice];
 	
-	cv::Mat tmp;	
+	cv::Mat tmp;
 
-	for(int slice=0; slice<nSlices; slice++){
-		std::cout << "calculation of slice " << slice << std::endl;	
-		//std::cout << "Decompressing and converting videos of slice " << slice << endl;
+	bool frame_avail = 1;
+	int framesGrabbed;
 
-		//clock_t before, after;
+rR->nextFrame(tmp);
+pR->nextFrame(tmp);
 
-		//before = clock();
-
-		int framesGrabbed = 0;
+	while(frame_avail){ 
+		framesGrabbed = 0;
 		while(framesGrabbed < framesPerSlice){
-			bool frame_avail = orig->nextFrame(in[framesGrabbed]);
+			frame_avail = rR->nextFrame(in[framesGrabbed]);
 			in[framesGrabbed].convertTo(inLum[framesGrabbed], CV_32F);
 
-			processed->nextFrame(out[framesGrabbed]);
+			pR->nextFrame(out[framesGrabbed]);
 			out[framesGrabbed].convertTo(outLum[framesGrabbed], CV_32F);
 
 			if(!frame_avail) break;
 			framesGrabbed++;
-		}
-		//std::cout << "grabbed " << framesGrabbed << " frames for this slice " <<std::endl;
-	
-		//after = clock();
-		//std::cout << "decompression and conversion finished in " << double(after-before) / CLOCKS_PER_SEC << "s" <<endl;	
-		
+		}	
+		if(!framesGrabbed) break;
+
 		if(psnr_flag)
-			psnr.compute(inLum, outLum, framesGrabbed);		
+			psnr.compute(inLum, outLum, framesGrabbed);
 		if(ssim_flag)
 			ssim.compute(inLum, outLum, framesGrabbed);
 		if(vqm_flag) 

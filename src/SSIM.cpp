@@ -22,16 +22,10 @@
 
 
 
-SSIM::SSIM(int nSlices, std::string logfile_path, int loglevel){
+SSIM::SSIM(std::string logfile_path, int loglevel){
 	this->logfile_path = logfile_path;
 	this->loglevel = loglevel;
-//	std::cout << "[debug] calling SSIM constructor " << std::endl;
-	this->nSlices = nSlices;
-	nProcessed = new int[nSlices]();
-	values = new double[nSlices]();
-	actSlice = 0;
 }
-
 
 double SSIM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	std::ofstream logfile;
@@ -58,20 +52,16 @@ double SSIM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 double SSIM::getMetricValue(){
 	double sum = 0;
 	int n = 0;
-	for(int i=0; i<nSlices;i++){
-		sum += values[i]*nProcessed[i];
+	
+	for(std::vector<int>::size_type i = 0; i != values.size(); i++) {
+		sum += values[i]*nProcessed[i];		
 		n += nProcessed[i];
 	}
 	return sum / n;
 } 
 void SSIM::addCalculation(double val, int nFrames){
-//	std::cout << "[debug] addCqalculation internal variables: " << std::endl;
-//	std::cout << "[debug] \t val: " << val << std::endl;
-//	std::cout << "[debug] \t nFrames: " << nFrames << std::endl;
-// 	std::cout << "[debug] \t actSlice: " << actSlice << std::endl;
-	values[actSlice] = val;
-	nProcessed[actSlice] = nFrames;
-	actSlice++;
+	values.push_back(val);
+	nProcessed.push_back(nFrames);
 }
 double SSIM::computeSingleFrame( const cv::Mat& I1, const cv::Mat& I2){
 

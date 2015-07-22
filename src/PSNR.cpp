@@ -19,14 +19,11 @@
  */
 
 #include "PSNR.hpp" 
+#include <vector>
 
-PSNR::PSNR(int nSlices, std::string logfile_path, int loglevel){
+PSNR::PSNR(std::string logfile_path, int loglevel){
 	this->logfile_path = logfile_path;
-	this->loglevel = loglevel;
-	this->nSlices = nSlices;
-	this->nProcessed = new int[nSlices]();
-	this->values = new double[nSlices]();
-	this->actSlice = 0;
+	this->loglevel = loglevel;	
 }
 
 double PSNR::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
@@ -54,16 +51,15 @@ double PSNR::computeSingleFrame(cv::Mat& orig, cv::Mat& processed){
 	cv::subtract(orig, processed, tmp);
 	tmp = tmp.mul(tmp);
 	double mse = cv::mean(tmp).val[0];	
-	if(mse <= 1e-10){
-		mse = 1e-15; // => psnr ~200 if frames identical to avoid division by zero
+	if(mse <= 1e-4){
+		mse = 1e-4; // => psnr ~200 if frames identical to avoid division by zero
 	}	
 
 	return 10.0 * log10((255 * 255) / mse);
 }
 void PSNR::addCalculation(double val, int nFrames){
-	values[actSlice] = val;
-	nProcessed[actSlice] = nFrames;
-	actSlice++;
+	values.push_back(val);
+	nProcessed.push_back(nFrames);
 }
 
 /*
@@ -72,7 +68,8 @@ void PSNR::addCalculation(double val, int nFrames){
 double PSNR::getMetricValue(){
 	double sum = 0;
 	int n = 0;
-	for(int i=0; i<nSlices;i++){
+	
+	for(std::vector<int>::size_type i = 0; i != values.size(); i++) {
 		sum += values[i]*nProcessed[i];		
 		n += nProcessed[i];
 	}
