@@ -33,6 +33,8 @@ class PSNR: public Metric{
 	double* values; 
 	int actSlice;
 	int nSlices;
+	std::string logfile_path;
+	int loglevel;
 
 	public:
 		/* 
@@ -45,10 +47,11 @@ class PSNR: public Metric{
 		 * returns the metric value 
 		 */
 		double getMetricValue();
+		 
 		/*
-		 * Constructor, param: number of slices
+		 * Constructor, param: number of slices, log file path, log level
 		 */
-		PSNR(int);
+		PSNR(int, std::string, int);
 	private:
 		/* 
 		 * Computes PSNR Value for a pair of images. 

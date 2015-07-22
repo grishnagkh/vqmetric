@@ -20,7 +20,9 @@
 
 #include "PSNR.hpp" 
 
-PSNR::PSNR(int nSlices){
+PSNR::PSNR(int nSlices, std::string logfile_path, int loglevel){
+	this->logfile_path = logfile_path;
+	this->loglevel = loglevel;
 	this->nSlices = nSlices;
 	this->nProcessed = new int[nSlices]();
 	this->values = new double[nSlices]();
@@ -28,11 +30,21 @@ PSNR::PSNR(int nSlices){
 }
 
 double PSNR::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
+	std::ofstream logfile;
+	logfile.open ((logfile_path + ".csv").c_str(), std::ios::out | std::ios::app ); //open in append mode
+
 	double sum = 0;
+	double tmp = 0;
 	for(int i=0; i<nFrames;i++){
-		sum += computeSingleFrame(orig[i], processed[i]);
+		tmp = computeSingleFrame(orig[i], processed[i]);
+		sum += tmp;
+		if(loglevel == 1){
+			logfile << tmp << std::endl;
+		}
 	}
-	double psnr = sum/nFrames;
+	logfile.close();
+
+	double psnr = sum/nFrames;	
 	addCalculation(psnr, nFrames);	
 	return psnr; 
 }
@@ -53,6 +65,7 @@ void PSNR::addCalculation(double val, int nFrames){
 	nProcessed[actSlice] = nFrames;
 	actSlice++;
 }
+
 /*
  * Collapse metric value in time, luckily we just have to calculate weighted average...
  */	
@@ -60,7 +73,7 @@ double PSNR::getMetricValue(){
 	double sum = 0;
 	int n = 0;
 	for(int i=0; i<nSlices;i++){
-		sum += values[i]*nProcessed[i];
+		sum += values[i]*nProcessed[i];		
 		n += nProcessed[i];
 	}
 	return sum / n;

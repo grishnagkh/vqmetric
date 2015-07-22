@@ -22,7 +22,9 @@
 
 
 
-SSIM::SSIM(int nSlices){
+SSIM::SSIM(int nSlices, std::string logfile_path, int loglevel){
+	this->logfile_path = logfile_path;
+	this->loglevel = loglevel;
 //	std::cout << "[debug] calling SSIM constructor " << std::endl;
 	this->nSlices = nSlices;
 	nProcessed = new int[nSlices]();
@@ -32,13 +34,20 @@ SSIM::SSIM(int nSlices){
 
 
 double SSIM::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
-	double sum = 0;
+	std::ofstream logfile;
+	logfile.open ((logfile_path + ".csv").c_str(), std::ios::out | std::ios::app ); //open in append mode
+
+	double sum = 0;	
+	double tmp = 0;
 	for(int i=0; i<nFrames;i++){
-		sum += computeSingleFrame(orig[i], processed[i]);		
+		tmp = computeSingleFrame(orig[i], processed[i]);		
+		sum += tmp;
+		if(loglevel == 1){
+			logfile << tmp << std::endl;
+		}
 	}
+	logfile.close();
 	double ssim = sum/nFrames;
-//	std::cout << "[debug] ssim calc finished with value " << ssim << std::endl;
-//	std::cout << "[debug] adding the calculation to internal history" << std::endl;
 	addCalculation(ssim, nFrames);	
 	return ssim; 
 }
@@ -54,7 +63,7 @@ double SSIM::getMetricValue(){
 		n += nProcessed[i];
 	}
 	return sum / n;
-}
+} 
 void SSIM::addCalculation(double val, int nFrames){
 //	std::cout << "[debug] addCqalculation internal variables: " << std::endl;
 //	std::cout << "[debug] \t val: " << val << std::endl;

@@ -22,6 +22,9 @@
 #ifndef metric_hpp
 #define metric_hpp
 
+#include <iostream>
+#include <fstream>
+
 #include "opencv2/opencv.hpp" 
 
 /*
@@ -46,6 +49,7 @@ class Metric{
 		 * this is especially helpful when dealing with big files
 		 */
 		virtual double getMetricValue() = 0;
+	 
 	protected:		
 		/******************************/
 		/****** UTILITY functions *****/
