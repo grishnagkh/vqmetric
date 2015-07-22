@@ -22,7 +22,6 @@
 #include "opencv2/opencv.hpp"
 #include "VideoCaptureReader.hpp"
 #include "VideoReader.hpp"
-#include "Y4MReader.hpp"
 #include "PSNR.hpp"
 #include "SSIM.hpp"
 #include "VQM.hpp"
@@ -31,15 +30,10 @@
 #include <stdlib.h>
 #include <getopt.h>
 
-
-int printUsage(){
-	
-}
-
 /* 
  * Sample call 
  *
- * 	./main -p 500.mp4 -r 1000.mp4 --psnr --ssim out
+ * 	./main -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --psnr --ssim out
  *
  */
 
@@ -109,7 +103,7 @@ int main(int argc, char **argv){
 	}else{
 		out_prefix = "out";
 	}
-//	std::cout << "output file prefix: " << out_prefix << std::endl;
+	std::cout << "reffmt: " << reffmt << strcmp(reffmt.c_str(), "mp4") << std::endl;
 
 	std::cout << "flags" 			   << std::endl;	
 	std::cout << "\tpsnr: " << psnr_flag << std::endl;
@@ -150,50 +144,62 @@ int main(int argc, char **argv){
 	// process .2 seconds slices 
 	int framesPerSlice = rR->getFps() * 0.2; 
 std::cout << framesPerSlice << " frames per slice" << std::endl;
-	/* delete output files if they already exist */
-	remove( (out_prefix + "_psnr").c_str() ); 
-	remove( (out_prefix + "_ssim").c_str() ); 
-	remove( (out_prefix + "_vqm").c_str() ); 
+
+	remove( (out_prefix + "_psnr.csv").c_str() );
+	remove( (out_prefix + "_ssim.csv").c_str() );
+	remove( (out_prefix + "_vqm.csv").c_str() );
+
 
 //reserving for 10000 slices,.,, later we will rertie to vectors 
 	PSNR psnr(out_prefix + "_psnr", 1);
 	SSIM ssim(out_prefix + "_ssim", 1);
 
-	VQM vqm(10000, 12000); //just until we have vectors
+	VQM vqm(10000, 12000); //just until we have vectors, todo rewrite to vectors
 
-	cv::Mat inLum[framesPerSlice];
-	cv::Mat outLum[framesPerSlice];
-	cv::Mat in[framesPerSlice];
-	cv::Mat out[framesPerSlice];
+	cv::Mat read1[framesPerSlice];
+	cv::Mat read2[framesPerSlice];
+	cv::Mat read11[framesPerSlice];
+	cv::Mat read21[framesPerSlice];
+
+	cv::Mat ref[framesPerSlice][3];
+	cv::Mat proc[framesPerSlice][3];
 	
 	cv::Mat tmp;
 
-	bool frame_avail = 1;
-	int framesGrabbed;
+	bool frame_avail = true;
+	int i; //frames grabbed
 
-rR->nextFrame(tmp);
-pR->nextFrame(tmp);
+std::cout << rR->getVideoFilePath() << ";" << pR->getVideoFilePath() << std::endl;
 
 	while(frame_avail){ 
-		framesGrabbed = 0;
-		while(framesGrabbed < framesPerSlice){
-			frame_avail = rR->nextFrame(in[framesGrabbed]);
-			in[framesGrabbed].convertTo(inLum[framesGrabbed], CV_32F);
-
-			pR->nextFrame(out[framesGrabbed]);
-			out[framesGrabbed].convertTo(outLum[framesGrabbed], CV_32F);
-
+		i = 0;
+		while(i < framesPerSlice){
+			frame_avail = rR->nextFrame(tmp);
+			tmp.convertTo(read1[i], CV_32F);
 			if(!frame_avail) break;
-			framesGrabbed++;
-		}	
-		if(!framesGrabbed) break;
+			pR->nextFrame(tmp);
+			tmp.convertTo(read2[i], CV_32F);
 
+			cv::cvtColor(read1[i], read11[i], CV_BGR2YCrCb);		
+			cv::cvtColor(read2[i], read21[i], CV_BGR2YCrCb);	
+
+			cv::split( read11[i], ref[i] ); 
+			cv::split( read21[i], proc[i] ); 
+
+			i++;
+		}	
+		if(!i) break; //no frames in slice
+
+std::cout << "calculating over " << i << " frames: " ;
+	
 		if(psnr_flag)
-			psnr.compute(inLum, outLum, framesGrabbed);
+std::cout	<<			psnr.compute(ref, proc, i);
 		if(ssim_flag)
-			ssim.compute(inLum, outLum, framesGrabbed);
-		if(vqm_flag) 
-			vqm.compute(in, out, framesGrabbed);
+std::cout<<";"<<		ssim.compute(ref, proc, i);
+		//if(vqm_flag) 
+			//vqm.compute(in, out, framesGrabbed);
+
+std::cout << std::endl;
 	}
 
 	std::cout << "cumulated PSNR over video " << psnr.getMetricValue() << std::endl;

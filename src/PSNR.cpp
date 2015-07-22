@@ -26,14 +26,14 @@ PSNR::PSNR(std::string logfile_path, int loglevel){
 	this->loglevel = loglevel;	
 }
 
-double PSNR::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
+double PSNR::compute(cv::Mat orig[][3], cv::Mat processed[][3], int nFrames){
 	std::ofstream logfile;
 	logfile.open ((logfile_path + ".csv").c_str(), std::ios::out | std::ios::app ); //open in append mode
 
 	double sum = 0;
 	double tmp = 0;
 	for(int i=0; i<nFrames;i++){
-		tmp = computeSingleFrame(orig[i], processed[i]);
+		tmp = computeSingleFrame(orig[i][0], processed[i][0]);		 //[0].. only on luma channel
 		sum += tmp;
 		if(loglevel == 1){
 			logfile << tmp << std::endl;
@@ -46,13 +46,13 @@ double PSNR::compute(cv::Mat orig[], cv::Mat processed[], int nFrames){
 	return psnr; 
 }
 
-double PSNR::computeSingleFrame(cv::Mat& orig, cv::Mat& processed){
-	cv::Mat tmp; 
-	cv::subtract(orig, processed, tmp);
+double PSNR::computeSingleFrame(cv::Mat& reference, cv::Mat& processed){
+	cv::Mat tmp;
+	cv::subtract(reference, processed, tmp);
 	tmp = tmp.mul(tmp);
 	double mse = cv::mean(tmp).val[0];	
-	if(mse <= 1e-4){
-		mse = 1e-4; // => psnr ~200 if frames identical to avoid division by zero
+	if(mse <= 1e-10){
+		mse = 1e-10; // => psnr clip to ~148
 	}	
 
 	return 10.0 * log10((255 * 255) / mse);

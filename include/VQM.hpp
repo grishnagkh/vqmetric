@@ -77,12 +77,15 @@ class VQM: public Metric{
 		 * the result of a single computation round are stored 
 		 * internally in the VQM object
 		 */
-		double compute(cv::Mat[], cv::Mat[], int);
+		double compute(cv::Mat[][3], cv::Mat[][3], int);
 		/* 
 		 * returns the metric value until now, 
 		 * this is especially helpful when dealing with big files
 		 */
 		double getMetricValue();
+
+		int save(std::string, int, int) ;
+
 		/*
 		 * cumulates the results
 		 */
@@ -93,10 +96,11 @@ class VQM: public Metric{
 		 * parameter1: number of time slices for the computation 
 		 *
 		 */
-		VQM(int);
+		VQM(int, int);
 	private:		
 		double perc_thresh(double, double);
 		double calc_mean(float*, int);
+		double calc_mean_squared(float*, int);
 		double calc_sd(float*, int);
 		/* (squared) euclidean distance of two points */
 		double euclideansq(double, double, double, double);

@@ -40,7 +40,7 @@ class PSNR: public Metric{
  		 * according to the mean of the PSNR value for each
          * frame. 
 		 */
-		double compute(cv::Mat[], cv::Mat[], int);
+		double compute(cv::Mat[][3], cv::Mat[][3], int);
 		/* 
 		 * returns the metric value 
 		 */
