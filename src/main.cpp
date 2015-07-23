@@ -33,6 +33,11 @@
 
 void printUsage();
 
+const int VERBOSE_SILENT = 0;
+const int VERBOSE = 1;
+const int VERBOSE_EXTENDED = 2;
+const int VERBOSE_DEBUG = 3;
+
 /* 
  * Sample call 
  *
@@ -40,8 +45,13 @@ void printUsage();
  *
  */
 
-int main(int argc, char **argv){
-	
+int main(int argc, char **argv){	
+
+	if(argc == 0){
+		printUsage();
+		exit(0);
+	}
+
 	/* begin option parsing */
 	int c;
 	/* flags */
@@ -49,9 +59,10 @@ int main(int argc, char **argv){
 	int ssim_flag = 0;
 	int vqm_flag = 0;
 
+	int verbose = 0;
+
 	string processed, reference, procfmt, reffmt, outputmode, scaling, out_prefix;
 	
-	//TODO: segment length parameter
 	while (1){
 		static struct option long_options[] = {	
 			  {"psnr", no_argument, &psnr_flag, 1},
@@ -60,7 +71,8 @@ int main(int argc, char **argv){
 
  			 /* These options don’t set a flag.
 				 We distinguish them by their indices. */
-			  {"help",  no_argument, 0 , 'h'},
+			  {"help",  			no_argument, 		0, 'h'},
+			  {"verbose",  			required_argument, 	0, 'v'},
 			  {"processed",  		required_argument,	0, 'p'}, // path to source file
 			  {"reference",  		required_argument, 	0, 'r'}, // path to reference file
 			  {"processed-format",  required_argument, 	0, 'P'}, // try to estimate by file ending
@@ -72,7 +84,7 @@ int main(int argc, char **argv){
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "p:r:R:P:o:c:",
+		c = getopt_long (argc, argv, "p:r:R:P:o:c:vh",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -101,6 +113,14 @@ int main(int argc, char **argv){
 				std::cout << "scaling mode: " << optarg  << std::endl;
 				scaling = optarg;
 				break;
+			case 'v':
+				verbose = optarg[0];
+				if(verbose < VERBOSE_SILENT || verbose > VERBOSE_DEBUG){
+					std::cout << "illegal verbose level" << std::endl;
+					printUsage();
+					exit(-1);
+				}
+				break;
 			case 'h':
 				printUsage();
 				exit(0);
@@ -112,12 +132,13 @@ int main(int argc, char **argv){
 	}else{
 		out_prefix = "out";
 	}
-	std::cout << "reffmt: " << reffmt << strcmp(reffmt.c_str(), "mp4") << std::endl;
 
-	std::cout << "flags" 			   << std::endl;	
-	std::cout << "\tpsnr: " << psnr_flag << std::endl;
-	std::cout << "\tssim: " << ssim_flag << std::endl;
-	std::cout << "\tvqm:  " << vqm_flag  << std::endl;
+	if(verbose > VERBOSE_SILENT){
+		std::cout << "calculating" 	<< std::endl;	
+		std::cout << "\tpsnr: " << psnr_flag << std::endl;
+		std::cout << "\tssim: " << ssim_flag << std::endl;
+		std::cout << "\tvqm:  " << vqm_flag  << std::endl;
+	}
 
 /* option parsing end */
 
@@ -136,7 +157,8 @@ int main(int argc, char **argv){
 		return -1;
 	}
 	if(rR->getNFrames() != pR->getNFrames()){
-		std::cout << "original and processed video have different number of frames" << std::endl;
+		if(verbose > VERBOSE_SILENT)
+			std::cout << "original and processed video have different number of frames" << std::endl;
 		//return -1;
 	}
 	if(rR->getVideoWidth() != pR->getVideoWidth()){
@@ -152,7 +174,8 @@ int main(int argc, char **argv){
 	
 	// process .2 seconds slices 
 	int framesPerSlice = rR->getFps() * 0.2; 
-std::cout << framesPerSlice << " frames per slice" << std::endl;
+	if(verbose == VERBOSE_DEBUG)
+		std::cout << framesPerSlice << " frames per slice" << std::endl;
 
 	remove( (out_prefix + "_psnr.csv").c_str() );
 	remove( (out_prefix + "_ssim.csv").c_str() );
@@ -178,7 +201,8 @@ std::cout << framesPerSlice << " frames per slice" << std::endl;
 	bool frame_avail = true;
 	int i; //frames grabbed
 
-std::cout << rR->getVideoFilePath() << ";" << pR->getVideoFilePath() << std::endl;
+	if(verbose)
+		std::cout << rR->getVideoFilePath() << ";" << pR->getVideoFilePath() << std::endl;
 
 	while(frame_avail){ 
 		i = 0;
@@ -200,22 +224,35 @@ std::cout << rR->getVideoFilePath() << ";" << pR->getVideoFilePath() << std::end
 			i++;
 		}	
 		if(!i) break; //no frames in slice
-
-std::cout << "calculating over " << i << " frames: " ;
+		
+		if(verbose == VERBOSE_DEBUG)
+			std::cout << "[debug] calculating over " << i << " frames: " ;
 	
-		if(psnr_flag)
-std::cout	<<			psnr.compute(ref, proc, i);
-		if(ssim_flag)
-std::cout<<";"<<		ssim.compute(ref, proc, i);
-		//if(vqm_flag) 
-			//vqm.compute(in, out, framesGrabbed);
+		if(psnr_flag){
+			if(verbose == VERBOSE_DEBUG)
+				std::cout << "[debug] psnr: " << psnr.compute(ref, proc, i) << std::endl;
+			else
+				psnr.compute(ref, proc, i);
+		}
 
-std::cout << std::endl;
+		if(ssim_flag){
+			if(verbose == VERBOSE_DEBUG)
+				std::cout << "[debug] ssim: " << ssim.compute(ref, proc, i) << std::endl;
+			else
+				ssim.compute(ref, proc, i);
+		}
+
+		if(vqm_flag){
+			vqm.compute(ref, proc, i);
+		}
+	
 	}
-
-	std::cout << "cumulated PSNR over video " << psnr.getMetricValue() << std::endl;
-	std::cout << "cumulated SSIM over video " << ssim.getMetricValue() << std::endl;
-
+	
+	if(verbose > VERBOSE_SILENT){
+		std::cout << "cumulated PSNR over video " << psnr.getMetricValue() << std::endl;
+		std::cout << "cumulated SSIM over video " << ssim.getMetricValue() << std::endl;
+	}
+	
 	return 0;	
 }
 
@@ -224,6 +261,14 @@ void printUsage(){
  std::cout << "-p, --processed\n\tpath to processed video file" << std::endl;
  std::cout << "--psnr\n\tcalculate peak signal to noise ratio" << std::endl;
  std::cout << "--ssim\n\tcalculate structured similarity" << std::endl;
+ std::cout << "-h, --help\n\tprint this message" << std::endl;
+ std::cout << "-v <level>, --verbose <level>" << std::endl;
+	std::cout << "\t" << VERBOSE_SILENT << "- silent" << std::endl;
+	std::cout << "\t" << VERBOSE << "- verbose" << std::endl;
+	std::cout << "\t" << VERBOSE_EXTENDED << "- verbose extended (same as verbose, for now) " << std::endl;
+	std::cout << "\t" << VERBOSE_DEBUG << "- verbose debug" << std::endl;
+	
+
  std::cout << "sample call" << std::endl;
  std::cout << "\t./vqtool -p <processed video> -r <reference video> --psnr --ssim out" << std::endl;
 
