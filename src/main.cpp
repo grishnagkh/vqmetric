@@ -30,6 +30,9 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+
+void printUsage();
+
 /* 
  * Sample call 
  *
@@ -54,8 +57,10 @@ int main(int argc, char **argv){
 			  {"psnr", no_argument, &psnr_flag, 1},
 			  {"ssim", no_argument, &ssim_flag, 1},
 			  {"vqm",  no_argument, &vqm_flag , 1},
+
  			 /* These options don’t set a flag.
 				 We distinguish them by their indices. */
+			  {"help",  no_argument, 0 , 'h'},
 			  {"processed",  		required_argument,	0, 'p'}, // path to source file
 			  {"reference",  		required_argument, 	0, 'r'}, // path to reference file
 			  {"processed-format",  required_argument, 	0, 'P'}, // try to estimate by file ending
@@ -95,6 +100,10 @@ int main(int argc, char **argv){
 			case 'c':
 				std::cout << "scaling mode: " << optarg  << std::endl;
 				scaling = optarg;
+				break;
+			case 'h':
+				printUsage();
+				exit(0);
 				break;		 
 		}
 	}
@@ -127,8 +136,8 @@ int main(int argc, char **argv){
 		return -1;
 	}
 	if(rR->getNFrames() != pR->getNFrames()){
-		std::cout << "original and processed video have different number of frames, we abort here";
-		return -1;
+		std::cout << "original and processed video have different number of frames" << std::endl;
+		//return -1;
 	}
 	if(rR->getVideoWidth() != pR->getVideoWidth()){
 		std::cout << "original and processed video have different widths, we abort here";
@@ -176,9 +185,11 @@ std::cout << rR->getVideoFilePath() << ";" << pR->getVideoFilePath() << std::end
 		while(i < framesPerSlice){
 			frame_avail = rR->nextFrame(tmp);
 			tmp.convertTo(read1[i], CV_32F);
-			if(!frame_avail) break;
-			pR->nextFrame(tmp);
+			
+			frame_avail = frame_avail && pR->nextFrame(tmp);
 			tmp.convertTo(read2[i], CV_32F);
+
+			if(!frame_avail) break;
 
 			cv::cvtColor(read1[i], read11[i], CV_BGR2YCrCb);		
 			cv::cvtColor(read2[i], read21[i], CV_BGR2YCrCb);	
@@ -206,4 +217,14 @@ std::cout << std::endl;
 	std::cout << "cumulated SSIM over video " << ssim.getMetricValue() << std::endl;
 
 	return 0;	
+}
+
+void printUsage(){
+ std::cout << "-r, --reference\n\tpath to reference video file" << std::endl;
+ std::cout << "-p, --processed\n\tpath to processed video file" << std::endl;
+ std::cout << "--psnr\n\tcalculate peak signal to noise ratio" << std::endl;
+ std::cout << "--ssim\n\tcalculate structured similarity" << std::endl;
+ std::cout << "sample call" << std::endl;
+ std::cout << "\t./vqtool -p <processed video> -r <reference video> --psnr --ssim out" << std::endl;
+
 }
