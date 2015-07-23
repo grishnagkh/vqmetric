@@ -11,7 +11,7 @@ OBJDIR = build
 vpath %.cpp src
 vpath %.hpp include
 
-OBJ = ${addprefix ${OBJDIR}/, Metric.o VQM.o PSNR.o SSIM.o VideoReader.o VideoCaptureReader.o main.o}
+OBJ = ${addprefix ${OBJDIR}/, Metric.o VQM.o PSNR.o SSIM.o VideoReader.o Y4MReader.o VideoCaptureReader.o main.o}
 
 all: ${OBJ} 
 	${CC} ${CFLAGS} ${OBJ} ${LIBS} ${LDFLAGS} -o vqtool
