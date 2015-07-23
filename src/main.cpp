@@ -18,25 +18,9 @@
  * MA 02110-1301 USA
  */
 
-#include <ctime>
-#include "opencv2/opencv.hpp"
-#include "VideoCaptureReader.hpp"
-#include "VideoReader.hpp"
-#include "PSNR.hpp"
-#include "SSIM.hpp"
-#include "VQM.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <getopt.h>
+#include "main.hpp"
 
-
-void printUsage();
-
-const int VERBOSE_SILENT = 0;
-const int VERBOSE = 1;
-const int VERBOSE_EXTENDED = 2;
-const int VERBOSE_DEBUG = 3;
 
 /* 
  * Sample call 
@@ -114,9 +98,9 @@ int main(int argc, char **argv){
 				scaling = optarg;
 				break;
 			case 'v':
-				verbose = optarg[0];
+				verbose = optarg[0] - '0';
 				if(verbose < VERBOSE_SILENT || verbose > VERBOSE_DEBUG){
-					std::cout << "illegal verbose level" << std::endl;
+					std::cout << "illegal verbose level: " << verbose << std::endl;
 					printUsage();
 					exit(-1);
 				}
@@ -183,10 +167,10 @@ int main(int argc, char **argv){
 
 
 //reserving for 10000 slices,.,, later we will rertie to vectors 
-	PSNR psnr(out_prefix + "_psnr", 1);
-	SSIM ssim(out_prefix + "_ssim", 1);
+	PSNR psnr(out_prefix + "_psnr", LOG_RESULTS);
+	SSIM ssim(out_prefix + "_ssim", LOG_RESULTS);
 
-	VQM vqm(10000, 12000); //just until we have vectors, todo rewrite to vectors
+	VQM vqm(out_prefix + "_vqm", LOG_DEBUG, VERBOSE_DEBUG); //just until we have vectors, todo rewrite to vectors
 
 	cv::Mat read1[framesPerSlice];
 	cv::Mat read2[framesPerSlice];
@@ -200,9 +184,6 @@ int main(int argc, char **argv){
 
 	bool frame_avail = true;
 	int i; //frames grabbed
-
-	if(verbose)
-		std::cout << rR->getVideoFilePath() << ";" << pR->getVideoFilePath() << std::endl;
 
 	while(frame_avail){ 
 		i = 0;

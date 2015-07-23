@@ -33,7 +33,9 @@
  *
  */
 
-/***** TODO *****/
+const int Y = 0;
+const int CR = 1;
+const int CB = 2;
 
 class VQM: public Metric{
 	double* si_loss;
@@ -96,7 +98,7 @@ class VQM: public Metric{
 		 * parameter1: number of time slices for the computation 
 		 *
 		 */
-		VQM(int, int);
+		VQM(std::string, int, int);
 	private:		
 		double perc_thresh(double, double);
 		double calc_mean(float*, int);

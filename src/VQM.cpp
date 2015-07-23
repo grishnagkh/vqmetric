@@ -20,7 +20,8 @@
 
 #include "VQM.hpp" 
 
-VQM::VQM(int nSlices, int totalFrames){
+VQM::VQM(std::string logfile_path, int log_level, int verbose_level){
+/*
 	this->actSlice = 0;
 	this->nSlices = nSlices;
 	this->si_loss = new double[nSlices]();
@@ -30,30 +31,41 @@ VQM::VQM(int nSlices, int totalFrames){
 	this->chroma_spread = new double[totalFrames]();
 	this->ct_ati_gain = new double[nSlices]();
 	this->chroma_extreme = new double[nSlices]();
+*/
 };
 
 /* 
  * computes parts of VQM metrics for a .2 second slice 
  */	
-double VQM::compute(cv::Mat orig[][3], cv::Mat processed[][3], int nFrames){
+double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 	/* input: original frames */ 
+
 std::cout << "starting vqm calculation" << std::endl;
 
 	/* 
-	 * luminance planes for 
-	 * 	si_loss, hv loss,hv gain, si gain, ct ati gain
 	 *
-	 * chroma planes for
-	 * 	chroma spread and chroma extreme
+	 * Input parameters 
+	 * 		proc .. a slice of the processed image stream
+	 * 		ref ... a slice of the reference picture stream
+	 *
+	 * ref[0], proc[0]: luminance planes for calculation of
+	 * 		si_loss
+	 * 		si gain
+	 * 		hv loss
+	 * 		hv gain
+	 *		ct ati gain
+	 *	
+	 * ref[1] ref[2] proc[1] proc[2] YCr and YCb plane for calculation of 
+	 * 		chroma spread 
+	 *		chroma extreme
   	 */
 
-	cv::Mat lumO[nFrames], lumP[nFrames];
 	cv::Mat siO[nFrames], siP[nFrames];
 	cv::Mat hvO[nFrames], hvP[nFrames];
 	cv::Mat hvBarO[nFrames], hvBarP[nFrames];
 
-	int h = orig[0][0].rows;
-	int w = orig[0][0].cols;
+	int h = ref[0][0].rows;
+	int w = ref[0][0].cols;
 
 
 /*
@@ -65,91 +77,20 @@ chroma_spread
 			(4) Spatially collapse by computing the standard deviation of blocks for each 1-frame slice of time.
 			(5) Temporally collapse by sorting the values in time and selecting the 10% level, and then clip at a minimum value of 0.6. Since all values are positive, this represents a bestcase 	processing temporally. Thus, chroma_spread measures color impairments that are nearly always present
 */
-
-//orig, processed are the original image sequences
-
-
+ 
 
 	/* kernel to calculate mean of a stdimx \times stdimy region*/
-	int stdimx = 8; /* kernel size x */
-	int stdimy = 8; /* kernel size y */
-	cv::Point anchor = cv::Point(0,0); 		/* anchor @ top left corner */
+//	int stdimx = 8; /* kernel size x */
+// 	int stdimy = 8; /* kernel size y */
+//	cv::Point anchor = cv::Point(0,0); 		/* anchor @ top left corner */
 	/* the actual kernel*/
-	cv::Mat mean_kernel = cv::Mat::ones(stdimx, stdimy, CV_32F) /  (float)(stdimx*stdimy);
-	cv::Mat exo;
-	cv::Mat exp;
-	
-	
-
-cv::Mat ochannels[3];
-cv::Mat pchannels[3];
-
-
-	float chromafeature[nFrames*w/stdimx*h/stdimy];
-int countaeeeer = 0;
-	for(int i=0; i<nFrames; i++){
-
-
-			/*	(1) Divide the CB and CR color planes into separate 8 pixel x 8 line x 1 frame S-T regions. */	
-  
-lumO[i] = orig[i][0];
-lumP[i] = processed[i][0];
-
-			/* (2) Compute the mean of each S-T region. Multiple the CR means by 1.5 to increase the perceptual weighting of the red color component in the next step. */
-		cv::filter2D(orig[i][0], exo, -1 , mean_kernel, anchor );
-		cv::filter2D(processed[i][0], exp, -1 , mean_kernel, anchor );
-	
-cv::split( exo, ochannels ); 
-cv::split( exp, pchannels ); 
-ochannels[1].mul(1.5);
-pchannels[1].mul(1.5);
-
-			/*	(3) Compare original and processed feature streams CB and CR using Euclidean distance (see equation 2). */
+//	cv::Mat mean_kernel = cv::Mat::ones(stdimx, stdimy, CV_32F) /  (float)(stdimx*stdimy);
+//		cv::filter2D(source , dest, -1 , mean_kernel, anchor );
 		
-float cro, crp, cbo, cbp;
-int xpos, ypos;
-for(int y=0; y<h/stdimy; y++){
-	for(int x=0; x<w/stdimx; x++){					
-		xpos = stdimx*x;
-		ypos = stdimy*y;
-		cro = ochannels[1].at<float>(xpos, ypos);
-		cbo = ochannels[2].at<float>(xpos, ypos);
-		crp = pchannels[1].at<float>(xpos, ypos);
-		cbp = pchannels[2].at<float>(xpos, ypos);
-		chromafeature[countaeeeer++] = sqrt(euclideansq(cro, cbo, crp, cbp)); //we want the sqrt here i think..  and i hope that's right :D :D :D just check it in this way...
-	}
-}
-	}
-
-	
-/* (4) Spatially collapse by computing the standard deviation of blocks for each 1-frame slice of time. 
-	we temporally collapse here for the actual sclice
-*/
-	
-	
-	float *fptr = chromafeature;
-
-	int bpf = w/stdimx*h/stdimy; //blocks per frame
-	
-double ex, ex2;
-	for(int  i=0; i<nFrames;i++){
-		ex = calc_mean(fptr, bpf);
-		ex2 = calc_mean_squared(fptr, bpf);
-		chroma_spread[nFrames*actSlice+i] = ex2 - ex*ex;
-
-		fptr += bpf;
-	}
-
-//todo.. iterative update of 
-
-//temporal collapse in getMetricValue...
-
-
-// var(X) = E(X^2) - [E(X)]^2
-
+	 
 
 /*
-
+TODO 
 chroma_extreme
 
 	(1) Perform steps 1 through 3 from chroma_spread.
@@ -170,22 +111,11 @@ chroma_extreme
 
 */
 
+
 //chroma extreme... 
 /* (1) Perform steps 1 through 3 from chroma_spread. */ 
 	// stored in chromafeature
 /* (2) Spatially collapse by computing for each slice of time the average of the worst 1% of blocks (i.e., rank-sorted values from the 99% level to the 100% level), and subtract from that result the 99% level. This identifies very bad distortions that impact a small portion of the image. */
-	//we only have this slice of time here, temporal collapse done later....
-	std::sort(chromafeature, chromafeature+sizeof(chromafeature)/sizeof(chromafeature[0]));
-	int onePerc = 0.01 * nFrames*w/stdimx*h/stdimy; // 1 % of elements
-	int tmpAvg = 0;
-	for(int i = 0; i<onePerc; i++){
-		tmpAvg += chromafeature[(nFrames*w/stdimx*h/stdimy-1)-i]; //last 1%
-	}
-	tmpAvg /= onePerc;
-	
-chroma_extreme[actSlice] = tmpAvg;
-
-
 
 
 std::cout << "[debug] transforming to cv32_f and calculating si, hv, and hvbar filters" << std::endl;
@@ -193,8 +123,8 @@ std::cout << "[debug] transforming to cv32_f and calculating si, hv, and hvbar f
 	for(int i=0; i<nFrames; i++){	
 	 	/* [si_loss (1)] apply SI13 filter to each luminance plane */
 		/* [hv_loss (1)] apply the HV and HVBAR perceptual filters to each luminance plane. */
-		filter_si_hv_bar(lumO[i], siO[i], hvBarO[i], hvO[i], 13);
-		filter_si_hv_bar(lumP[i], siP[i], hvBarP[i], hvP[i], 13);	
+		filter_si_hv_bar(ref[i][Y], siO[i], hvBarO[i], hvO[i], 13);
+		filter_si_hv_bar(proc[i][Y], siP[i], hvBarP[i], hvP[i], 13);	
 	}
 std::cout << "[debug] transformation to cv32_f and calculating si, hv, and hvbar filters ended" << std::endl;
 
@@ -395,10 +325,10 @@ std::cout << "[debug] splitting into " << nRegions << " s-t regions with " << el
 						/*	[ct_ati_gain (1)] Apply the “absolute value of temporal information” (ATI) motion detection filter to each luminance plane. 
 						ATI is the absolute value of a pixel-by-pixel difference between
 						the current and previous video frame. */
-						atiRegO[region][idx] =  abs(lumO[i].at<float>(idxX, idxY) - lumO[i+1].at<float>(idxX, idxY));
-						atiRegP[region][idx] =  abs(lumP[i].at<float>(idxX, idxY) - lumP[i+1].at<float>(idxX, idxY));
-						lumRegO[region][idx] =  lumO[i+1].at<float>(idxX, idxY);
-						lumRegP[region][idx] =  lumP[i+1].at<float>(idxX, idxY);				
+						atiRegO[region][idx] =  abs(ref[i][Y].at<float>(idxX, idxY) - ref[i+1][Y].at<float>(idxX, idxY));
+						atiRegP[region][idx] =  abs(proc[i][Y].at<float>(idxX, idxY) - proc[i+1][Y].at<float>(idxX, idxY));
+						lumRegO[region][idx] =  ref[i+1][Y].at<float>(idxX, idxY);
+						lumRegP[region][idx] =  proc[i+1][Y].at<float>(idxX, idxY);				
 
 						idx++;
 					}	
@@ -443,6 +373,16 @@ std::cout<<"[debug] ct_ati_gain for slice " << actSlice <<" : "<< ct_ati_gain[ac
 	return -1;
 }
 
+double VQM::timeCollapse(){
+/***** TODO *****/
+	return -1;
+}
+double VQM::getMetricValue(){
+/***** TODO *****/
+	return -1;
+}
+ 
+
 double VQM::loss(double d){
 	if(d>0) 
 		return 0;
@@ -453,16 +393,6 @@ double VQM::gain(double d){
 		return 0;
 	return d;
 }
-
-double VQM::timeCollapse(){
-/***** TODO *****/
-	return -1;
-}
-double VQM::getMetricValue(){
-/***** TODO *****/
-	return -1;
-}
- 
 
 double VQM::euclideansq(double fo1, double fo2, double fp1, double fp2){
 	/* returns the square of the euclidean distance */
