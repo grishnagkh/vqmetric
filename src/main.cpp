@@ -274,7 +274,16 @@ void dbg(double x, int verbose){
 }
 void printUsage(){
  std::cout << "-r, --reference\n\tpath to reference video file" << std::endl;
+ std::cout << "-R, --reference-format <format>" << std::endl;
+ std::cout << "\tmp4" << std::endl;
+ std::cout << "\ty4m\t - yuv420 supported" << std::endl;
+
  std::cout << "-p, --processed\n\tpath to processed video file" << std::endl;
+ std::cout << "-P, --processed-format <format>" << std::endl;
+ std::cout << "\tmp4" << std::endl;
+ std::cout << "\ty4m\t - yuv420 supported" << std::endl;
+
+
  std::cout << "--psnr\n\tcalculate peak signal to noise ratio" << std::endl;
  std::cout << "--ssim\n\tcalculate structured similarity" << std::endl;
  std::cout << "-h, --help\n\tprint this message" << std::endl;
