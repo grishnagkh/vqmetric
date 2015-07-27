@@ -20,18 +20,18 @@
 
 
 #include "main.hpp"
-
-
 /* 
  * Sample call 
  *
- * 	./main -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --psnr --ssim out
- *
+ * 	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --psnr --ssim out
+ *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --psnr --verbose 3
  */
 
 int main(int argc, char **argv){	
 
-	if(argc == 0){
+	std::ostringstream d;
+
+	if(argc == 1){
 		printUsage();
 		exit(0);
 	}
@@ -126,30 +126,57 @@ int main(int argc, char **argv){
 
 /* option parsing end */
 
-	VideoReader *rR, *pR;
-	
-	 
-	VideoCaptureReader o(reference);
-	rR = &o;
-	 
-	VideoCaptureReader p(processed);
-	pR = &p;
-	 
+	VideoReader * rR;
+	VideoReader * pR;
+
+	if(	(strncmp("mp4",procfmt.c_str(), 3) == 0 )){
+		pR = new VideoCaptureReader(processed);
+		dbg("[debug] intialized VideoCaptureReader for processed video sequence\n" , verbose);
+	}else if((strncmp("y4m",procfmt.c_str(), 3) == 0 )){
+		pR = new Y4MReader(processed);
+		dbg("[debug] intialized Y4MReader for processed video sequence\n", verbose);
+	}else{
+		if(verbose > VERBOSE_SILENT){
+			std::cout << "you did not specify an input format for the processed video, we assume mp4" << std::endl;
+		}
+		pR = new VideoCaptureReader(processed);	
+		dbg("[debug] intialized VideoCaptureReader for processed video sequence\n" , verbose);
+	}
+
+	if(	(strncmp("mp4",reffmt.c_str(), 3) == 0 )){
+		rR = new VideoCaptureReader(reference);
+		dbg("[debug] intialized VideoCaptureReader for reference video sequence\n", verbose);
+	}else if(	(strncmp("y4m",reffmt.c_str(), 3) == 0 )){
+		rR = new Y4MReader(reference);
+		dbg("[debug] intialized Y4MReader for reference video sequence\n" , verbose);
+	}else{
+		if(verbose > VERBOSE_SILENT){
+			std::cout << "you did not specify an input format for the reference video, we assume mp4" << std::endl;
+		}
+		rR = new VideoCaptureReader(reference);
+		dbg("[debug] intialized VideoCaptureReader for reference video sequence\n", verbose);
+	}
+
+	dbg("[debug] requesting fps...\n", verbose);
+
 
 	if(rR->getFps() != pR->getFps()){
 		std::cout << "original and processed video have different frame rates, we abort here";
 		return -1;
 	}
+	dbg("[debug] requesting number of frames...\n", verbose);
 	if(rR->getNFrames() != pR->getNFrames()){
 		if(verbose > VERBOSE_SILENT)
 			std::cout << "original and processed video have different number of frames" << std::endl;
 		//return -1;
 	}
+	dbg("[debug] requesting video width...\n", verbose);
 	if(rR->getVideoWidth() != pR->getVideoWidth()){
 		std::cout << "original and processed video have different widths, we abort here";
 		std::cout << " (scaling not implemented yet)";
 		return -1;
 	}
+	dbg("[debug] requesting video height...\n", verbose);
 	if(rR->getVideoHeight() != pR->getVideoHeight()){
 		std::cout << "original and processed video have different heights, we abort here";
 		std::cout << " (scaling not implemented yet)";
@@ -158,8 +185,9 @@ int main(int argc, char **argv){
 	
 	// process .2 seconds slices 
 	int framesPerSlice = rR->getFps() * 0.2; 
-	if(verbose == VERBOSE_DEBUG)
-		std::cout << framesPerSlice << " frames per slice" << std::endl;
+	dbg("[debug] ", verbose);
+	dbg(framesPerSlice, verbose);
+	dbg(" frames per slice\n" , verbose);
 
 	remove( (out_prefix + "_psnr.csv").c_str() );
 	remove( (out_prefix + "_ssim.csv").c_str() );
@@ -174,8 +202,6 @@ int main(int argc, char **argv){
 
 	cv::Mat read1[framesPerSlice];
 	cv::Mat read2[framesPerSlice];
-	cv::Mat read11[framesPerSlice];
-	cv::Mat read21[framesPerSlice];
 
 	cv::Mat ref[framesPerSlice][3];
 	cv::Mat proc[framesPerSlice][3];
@@ -188,39 +214,37 @@ int main(int argc, char **argv){
 	while(frame_avail){ 
 		i = 0;
 		while(i < framesPerSlice){
-			frame_avail = rR->nextFrame(tmp);
-			tmp.convertTo(read1[i], CV_32F);
-			
-			frame_avail = frame_avail && pR->nextFrame(tmp);
-			tmp.convertTo(read2[i], CV_32F);
-
+			frame_avail = rR->nextFrame(read1[i]);
+			frame_avail = frame_avail && pR->nextFrame(read2[i]);
 			if(!frame_avail) break;
 
-			cv::cvtColor(read1[i], read11[i], CV_BGR2YCrCb);		
-			cv::cvtColor(read2[i], read21[i], CV_BGR2YCrCb);	
-
-			cv::split( read11[i], ref[i] ); 
-			cv::split( read21[i], proc[i] ); 
+			cv::split( read1[i], ref[i] ); 
+			cv::split( read2[i], proc[i] ); 
 
 			i++;
 		}	
 		if(!i) break; //no frames in slice
 		
-		if(verbose == VERBOSE_DEBUG)
-			std::cout << "[debug] calculating over " << i << " frames: " ;
-	
+		dbg("[debug]  calculating over ", verbose);
+		dbg(i, verbose);
+		dbg(" frames\n", verbose);
+			
 		if(psnr_flag){
-			if(verbose == VERBOSE_DEBUG)
-				std::cout << "[debug] psnr: " << psnr.compute(ref, proc, i) << std::endl;
+			dbg( "[debug]  psnr: ", verbose);
+			if(verbose >= VERBOSE_DEBUG)
+				dbg(psnr.compute(ref, proc, i) , verbose);
 			else
 				psnr.compute(ref, proc, i);
+			dbg("\n", verbose);
 		}
 
 		if(ssim_flag){
-			if(verbose == VERBOSE_DEBUG)
-				std::cout << "[debug] ssim: " << ssim.compute(ref, proc, i) << std::endl;
+			dbg( "[debug]  ssim: ", verbose);
+			if(verbose >= VERBOSE_DEBUG)
+				dbg(ssim.compute(ref, proc, i), verbose);
 			else
 				ssim.compute(ref, proc, i);
+			dbg("\n", verbose);
 		}
 
 		if(vqm_flag){
@@ -236,7 +260,18 @@ int main(int argc, char **argv){
 	
 	return 0;	
 }
-
+void dbg(string x, int verbose){
+	if(verbose >= VERBOSE_DEBUG)
+		std::cout << x;
+}
+void dbg(int x, int verbose){
+	if(verbose >= VERBOSE_DEBUG)
+		std::cout << x;
+}
+void dbg(double x, int verbose){
+	if(verbose >= VERBOSE_DEBUG)
+		std::cout << x;
+}
 void printUsage(){
  std::cout << "-r, --reference\n\tpath to reference video file" << std::endl;
  std::cout << "-p, --processed\n\tpath to processed video file" << std::endl;

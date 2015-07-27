@@ -22,8 +22,10 @@
 #define Main_hpp
 
 #include "opencv2/opencv.hpp"
-#include "VideoCaptureReader.hpp"
 #include "VideoReader.hpp"
+#include "VideoCaptureReader.hpp"
+#include "Y4MReader.hpp"
+
 #include "PSNR.hpp"
 #include "SSIM.hpp"
 #include "VQM.hpp"
@@ -35,7 +37,10 @@
 
 
 int main(int, char**);
-void printUsage();
+void printUsage(void);
+void dbg(string, int);
+void dbg(int, int);
+void dbg(double, int);
 
 const int VERBOSE_SILENT 	= 0;
 const int VERBOSE 			= 1;
