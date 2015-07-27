@@ -42,15 +42,16 @@ Compilation tested with Ubuntu 14.0.4 and OpenCV 2.4.8.0
 -v <level>, --verbose <level>
 
 	0- silent
+
 	1- verbose
+
 	2- verbose extended (same as verbose, for now) 
+
 	3- verbose debug
 
 sample call
 
 	./vqtool -p <processed video> -r <reference video> --psnr --ssim out
-
-
 
 
 #### Features
