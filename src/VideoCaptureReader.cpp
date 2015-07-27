@@ -20,8 +20,26 @@
 
 #include "VideoCaptureReader.hpp"
 
+VideoCaptureReader::VideoCaptureReader(string x):VideoReader(x){
+	cv::VideoCapture cap();
+	this->cap.open(this->videoFilePath);
+};
+VideoCaptureReader::~VideoCaptureReader(){
+	this->cap.release();
+}
+bool VideoCaptureReader::isOpened(){
+	return this->cap.isOpened();
+}
 bool VideoCaptureReader::nextFrame(cv::Mat& theFrame){
-	return this->cap.read(theFrame);	
+
+	cv::Mat tmp;
+
+	bool success = this->cap.read(theFrame);	
+
+	theFrame.convertTo(tmp, CV_32F);	
+	cv::cvtColor(tmp, theFrame, CV_BGR2YCrCb);	
+
+	return success;	
 }
 int VideoCaptureReader::getFps(){
 	return this->cap.get(CV_CAP_PROP_FPS);

@@ -34,6 +34,9 @@ using namespace std;
 class VideoCaptureReader: public VideoReader{
 	cv::VideoCapture cap;
 	public:  
+		VideoCaptureReader(string );		
+		~VideoCaptureReader();
+		bool isOpened();
 		bool nextFrame(cv::Mat&);
 
 		int getFps();
@@ -42,15 +45,7 @@ class VideoCaptureReader: public VideoReader{
 		int getNFrames();
 		
 		std::string getVideoFilePath();
-		VideoCaptureReader(string x):VideoReader(x)
-			{
-				cv::VideoCapture cap();
-				this->cap.open(this->videoFilePath);
-			};
-		/* returns true when the file has been successfully opened, false otherwise */
-		bool isOpened(){
-			return this->cap.isOpened();
-		}
+
 };
 
 #endif
