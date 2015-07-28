@@ -35,7 +35,8 @@ bool VideoCaptureReader::nextFrame(cv::Mat& theFrame){
 	cv::Mat tmp;
 
 	bool success = this->cap.read(theFrame);	
-
+	if(!success)
+		return success; //do not convert unsuccessful grabbed frames^^
 	theFrame.convertTo(tmp, CV_32F);	
 	cv::cvtColor(tmp, theFrame, CV_BGR2YCrCb);	
 
