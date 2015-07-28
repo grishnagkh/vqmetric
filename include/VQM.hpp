@@ -34,20 +34,24 @@
  */
 
 const int Y = 0;
-const int CR = 1;
-const int CB = 2;
+const int CB = 1;
+const int CR = 2;
 
 class VQM: public Metric{
-	double* si_loss;
-	double* si_gain;
-	double* hv_loss;
-	double* hv_gain;
-	double* chroma_spread;
-	double* ct_ati_gain;
-	double* chroma_extreme;
+	std::vector<double> si_loss;
+	std::vector<double> si_gain;
+	std::vector<double> hv_loss;
+	std::vector<double> hv_gain;
+	std::vector<int> n_frames;
 
-	int nSlices;
-	int actSlice; 
+	std::vector<double> ct_ati_gain;
+
+	std::vector<double> chroma_spread;
+	std::vector<double> chroma_extreme;
+	std::vector<double> chroma_extreme_t;
+
+	std::string logfile_path;
+	int log_level;
 
 	static const double FACTOR_SI_LOSS = -0.2097;
 	static const double FACTOR_SI_GAIN = -2.3416;
@@ -58,6 +62,11 @@ class VQM: public Metric{
 	static const double FACTOR_CHROMA_EXTREME = 0.0076;
 
 	public:
+		static const int LOG_NONE	 	= 0;		
+		static const int LOG_MINIMAL 	= 1;
+		static const int LOG_DEFAULT 	= 2;
+		static const int LOG_EXCESSIVE 	= 3;
+			
 		/* 
 		 * Computes VQM values
 		 * as the Video Quality Metric is time sensitive, 
@@ -98,7 +107,8 @@ class VQM: public Metric{
 		 * parameter1: number of time slices for the computation 
 		 *
 		 */
-		VQM(std::string, int, int);
+		VQM(std::string, int, int);	
+		~VQM();
 	private:		
 		double perc_thresh(double, double);
 		double calc_mean(float*, int);

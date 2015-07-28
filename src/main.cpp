@@ -198,7 +198,7 @@ int main(int argc, char **argv){
 	PSNR psnr(out_prefix + "_psnr", LOG_RESULTS);
 	SSIM ssim(out_prefix + "_ssim", LOG_RESULTS);
 
-	VQM vqm(out_prefix + "_vqm", LOG_DEBUG, VERBOSE_DEBUG); //just until we have vectors, todo rewrite to vectors
+	VQM vqm(out_prefix + "_vqm", VQM::LOG_EXCESSIVE, VERBOSE_DEBUG); //just until we have vectors, todo rewrite to vectors
 
 	cv::Mat read1[framesPerSlice];
 	cv::Mat read2[framesPerSlice];
