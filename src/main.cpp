@@ -257,6 +257,24 @@ int main(int argc, char **argv){
 		std::cout << "cumulated PSNR over video " << psnr.getMetricValue() << std::endl;
 		std::cout << "cumulated SSIM over video " << ssim.getMetricValue() << std::endl;
 	}
+
+	dbg("LADIDA, let the cumulation of vqm begin", verbose);
+	
+	//TODO: rewritepsnr, ssim, metric, vqm so that a vector of doubles is a result of getMetricValue
+	if(vqm_flag){
+		dbg("collapsing in time 2s..\n", verbose);
+		vqm.timeCollapse(10); //10 0.2second slices...
+		dbg("calculating metric value...\n", verbose);
+		vqm.getMetricValue();
+		dbg("got metric value 2s  ...\n", verbose);
+
+		dbg("collapsing in time 4s..\n", verbose);
+		vqm.timeCollapse(20); //10 0.2second slices...
+		dbg("calculating metric value...\n", verbose);		
+		vqm.getMetricValue();
+		dbg("got metric value 4s ...\n", verbose);
+	}
+	dbg("shutting down...", verbose);
 	
 	return 0;	
 }

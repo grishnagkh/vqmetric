@@ -285,9 +285,7 @@ std::cout << "[debug] calculating si/hv gain/loss" << std::endl;
 	}
   
 
-/** [si_gain (4) ] spatially and temporally collapse by computing the average of all block and the clip at a minimum value of 0.004
-*/
-
+	/* [si_gain (4) ] spatially collapse by computing the average of all blocks */
 	si_gain_t /= nFrames * w/8 * h/8;
 	
 	si_gain.push_back(si_gain_t); 
@@ -441,60 +439,192 @@ if(this->log_level > LOG_MINIMAL){
 	logfile << "processed frames: " << nFrames << std::endl;
 }
 
-
-	
 	this->n_frames.push_back(nFrames);
-
 	
 	logfile.close();
 	
-	return -1;
+	return 0;
 }
 
-//TODO: a parameter with time slices (segment sizes) !?!?!
-double VQM::timeCollapse(){
-/***** TODO *****/
-/* [hv_gain (4)] Temporally collapse by taking the mean over all time slices. 	
-		TODO
-	*/ 
-/* hv_loss
-		(8) Temporally collapse by taking the mean over all time slices. //TODO: timecollapse / getMetricValue
-		(9) Square the parameter (i.e., non-linear scaling), and clip at a minimum value of 0.06 (see equation 5).  //TODO: timecollapse / getMetricValue
-	*/
+double VQM::timeCollapse(int nSlices){
 
-/** [si_gain (4) ] spatially and temporally collapse by computing the average of all block and the clip at a minimum value of 0.004
-	 * [si_gain (5) ] set all values greater than 0.14 to 0.14 
-	 * TODO: temporal collapse and clipping
-			if(si_gain_t < 0.004){
-				si_gain_t = 0004;
-			}
-			if(si_gain_t > 0.14){
-				si_gain_t = 0.14;
-			}
-	 */
-/*
-TODO
-chroma_spread
-			
-			(5) Temporally collapse by sorting the values in time and selecting the 10% level, and then clip at a minimum value of 0.6. Since all values are positive, this represents a bestcase 	processing temporally. Thus, chroma_spread measures color impairments that are nearly always present
-*/
-
-/*
-TODO 
-chroma_extreme
-	(3) Temporally collapse by computing standard deviation of the results from step 2 //this is meant over the whole video, so we must think of something ...
-
-*/
+	si_gain_collapsed.clear();
+	si_loss_collapsed.clear();
+	hv_gain_collapsed.clear();
+	hv_loss_collapsed.clear();
+	ct_ati_gain_collapsed.clear();
+	chroma_spread_collapsed.clear();
+	chroma_extreme_collapsed.clear();
 
 
-/*	[ct_ati_gain (9)] Temporally collapse by sorting values in time and selecting the 10% level. The parameter values are all positive, so this temporal collapsing function is a form of best-case processing, detecting impairments that are nearly always present.  TODO*/
+std::cout << "[debug] time collapse" << std::endl;	
+std::cout << "\t[debug] number of slices per time unit: " << nSlices << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< si_gain.size() << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< si_loss.size() << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< hv_gain.size() << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< hv_loss.size() << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< chroma_spread.size() << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< chroma_extreme.size() << std::endl;	
+std::cout << "\t[debug] number of calculated slices: "<< ct_ati_gain.size() << std::endl;	
 
 
-	return -1;
+	int avg;
+	int at;
+std::cout << "\t[debug] time collapse hv gain" << std::endl;
+	/* [hv_gain (4)] Temporally collapse by taking the mean over all time slices. */ 
+	avg = 0;
+	for(uint segmentStart = 0; segmentStart < hv_gain.size(); segmentStart += nSlices){
+		for(uint i = segmentStart; i < segmentStart + nSlices; i++){
+			avg += hv_gain[i];
+		}
+		hv_gain_collapsed.push_back( avg / nSlices );
+	}
+
+std::cout << "\t[debug] time collapse hv loss" << std::endl;
+	/*	( hv_loss 8) Temporally collapse by taking the mean over all time slices. */
+	avg = 0;
+	for(uint segmentStart = 0; segmentStart < hv_loss.size(); segmentStart += nSlices){
+		for(uint i = segmentStart; i < segmentStart + nSlices; i++){
+			avg += hv_loss[i];
+		}
+		hv_loss_collapsed.push_back( avg / nSlices );
+	}
+
+std::cout << "\t[debug] time collapse si gain" << std::endl;
+	/* [si_gain (4) ] temporally collapse by computing the average of all blocks */
+	avg = 0;
+	for(uint segmentStart = 0; segmentStart < si_gain.size(); segmentStart += nSlices){
+		for(uint i = segmentStart; i < segmentStart + nSlices; i++){
+			avg += si_gain[i];
+		}
+		si_gain_collapsed.push_back( avg / nSlices );
+	}
+
+std::cout << "\t[debug] time collapse chroma extreme" << std::endl;
+	double mean, meansq;
+	/* (chroma_extreme 3) Temporally collapse by computing standard deviation of the results */
+	for(uint segmentStart = 0; segmentStart < chroma_extreme.size(); segmentStart += nSlices * n_frames[segmentStart/nSlices]){
+
+		meansq = mean = 0;
+		
+		for(uint pos = segmentStart; pos < segmentStart + nSlices * n_frames[segmentStart/nSlices] ; pos++){
+			meansq += chroma_extreme[pos] * chroma_extreme[pos];
+			mean   += chroma_extreme[pos];
+		}
+		meansq /= nSlices * n_frames[segmentStart/nSlices];
+		mean   /= nSlices * n_frames[segmentStart/nSlices];
+		
+		chroma_extreme_collapsed.push_back( meansq - mean * mean);
+	}
+	
+
+
+
+std::cout << "\t[debug] time collapse ct ati gain" << std::endl;
+	/* [ct_ati_gain (9)] Temporally collapse by sorting values in time 
+		and selecting the 10% level.  */
+
+	std::vector<double> cloned_ct_ati_gain(ct_ati_gain.begin() , ct_ati_gain.end() );
+
+	for(uint segmentStart = 0; segmentStart < ct_ati_gain.size(); segmentStart += nSlices){
+		std::sort (cloned_ct_ati_gain.begin() + segmentStart, cloned_ct_ati_gain.begin() + segmentStart + nSlices);
+		at = nSlices * n_frames[segmentStart/nSlices] * 0.1;
+		ct_ati_gain_collapsed.push_back( ct_ati_gain[segmentStart + at] );
+	}
+
+
+
+
+
+
+
+/* (si_loss 7) Temporally collapse by sorting the values in time
+		 and selecting the 10% level*/ 
+
+	std::vector<double> cloned_si_loss(si_loss.begin() , si_loss.end() );
+
+std::cout << "\t[debug] time si loss" << std::endl;
+	at = nSlices * 0.1;	
+	for(uint segmentStart = 0; segmentStart < si_loss.size(); segmentStart += nSlices){
+		at = nSlices * 0.1;	
+
+		std::sort (cloned_si_loss.begin() + segmentStart, cloned_si_loss.begin() + segmentStart + nSlices);
+		
+		si_loss_collapsed.push_back( cloned_si_loss[segmentStart + at] );
+	}
+
+std::cout << "\t[debug] time collapse chroma spread" << std::endl;
+
+	/* (chroma_spread 5) Temporally collapse by sorting the values in time
+		 and selecting the 10% level*/ 
+	std::vector<double> cloned_chroma_spread(chroma_spread.begin() , chroma_spread.end() );
+	
+	for(uint segmentStart = 0; segmentStart < chroma_spread.size(); segmentStart += nSlices * n_frames[segmentStart/nSlices]){
+
+		at = nSlices * n_frames[segmentStart/nSlices] * 0.1;
+
+		std::sort (cloned_chroma_spread.begin() + segmentStart, cloned_chroma_spread.begin() + segmentStart + nSlices * n_frames[segmentStart/nSlices]);
+		
+		chroma_spread_collapsed.push_back( cloned_chroma_spread[segmentStart + at] );
+	}
+
+	return 0;
 }
+
 double VQM::getMetricValue(){
-/***** TODO *****/
-	return -1;
+	/* calculate vqm per segment */ 
+	int nSegments = si_gain_collapsed.size();
+	
+	std::cout << si_loss_collapsed.size() << std::endl;
+	std::cout << si_gain_collapsed.size() << std::endl;
+	std::cout << hv_loss_collapsed.size() << std::endl;
+	std::cout << hv_gain_collapsed.size() << std::endl;
+	std::cout << ct_ati_gain_collapsed.size() << std::endl;
+	std::cout << chroma_spread_collapsed.size() << std::endl;
+	std::cout << chroma_extreme_collapsed.size() << std::endl;
+	
+
+	for(int i = 0; i < nSegments; i++){
+		std::cout << "\t\t[debug] ####### SEGMENT " << i << " #######" << std::endl;
+
+		/* (chroma_spread 5) clip at a minimum value of 0.6. */
+		clip(chroma_spread_collapsed[i], 0.6);
+
+		/* [si_gain (5) ] clip at a minimum value of 0.004  */
+		clip(si_gain_collapsed[i], 0.004);
+
+		/* [si_gain (5) ] set all values greater than 0.14 to 0.14  */	
+		if(si_gain_collapsed[i] > 0.14)			
+			si_gain_collapsed[i] = 0.14;
+
+		/* ( hv_loss 9) Square the parameter (i.e., non-linear scaling), 
+			and clip at a minimum value of 0.06 */
+		hv_loss_collapsed[i] *= hv_loss_collapsed[i];
+		clip(hv_loss_collapsed[i], 0.06);
+
+
+		std::cout << "[debug] si_loss_collapsed (after clip) : " << si_loss_collapsed[i] << std::endl;
+		std::cout << "[debug] si_gain_collapsed: " << si_gain_collapsed[i] << std::endl;
+		std::cout << "[debug] hv_loss_collapsed: " << hv_loss_collapsed[i] << std::endl;
+		std::cout << "[debug] hv_gain_collapsed: " << hv_gain_collapsed[i] << std::endl;
+		std::cout << "[debug] ct_ati_gain_collapsed: " << ct_ati_gain_collapsed[i] << std::endl;
+		std::cout << "[debug] chroma_spread_collapsed: " << chroma_spread_collapsed[i] << std::endl;
+		std::cout << "[debug] chroma_extreme_collapsed: " << chroma_extreme_collapsed[i] << std::endl;
+		std::cout << "[debug] vqm value: : " 
+		<<
+		1 - 
+		si_loss_collapsed[i] * FACTOR_SI_LOSS +
+		si_gain_collapsed[i] * FACTOR_SI_GAIN +
+		hv_loss_collapsed[i] * FACTOR_HV_LOSS +
+		hv_gain_collapsed[i] * FACTOR_HV_GAIN +
+		ct_ati_gain_collapsed[i] * FACTOR_CT_ATI_GAIN +
+		chroma_spread_collapsed[i] * FACTOR_CHROMA_SPREAD +
+		chroma_extreme_collapsed[i] * FACTOR_CHROMA_EXTREME
+		<< std::endl;
+
+	}
+std::cout << "[debug] hey... in getmetric value, we dont get the segfault..." << std::endl;
+	return 0.0;
 }
  
 
@@ -522,10 +652,10 @@ double VQM::logComp(double orig, double processed){
 	return log10(processed/orig);
 }
  
-double VQM::clip(double f, double threshold){
-	if(f >= threshold)
-		return f;
-	return threshold;
+double VQM::clip(double p, double t){
+	if(p <= t)
+		return 0;
+	return p-t;
 } 
 double VQM::calc_mean(float* arr, int len){
 	double mean = 0;

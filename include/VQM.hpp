@@ -38,27 +38,51 @@ const int CB = 1;
 const int CR = 2;
 
 class VQM: public Metric{
-	std::vector<double> si_loss;
-	std::vector<double> si_gain;
-	std::vector<double> hv_loss;
-	std::vector<double> hv_gain;
-	std::vector<int> n_frames;
 
+	/* structural information loss, 1 value per time slice */
+	std::vector<double> si_loss;
+	/* structural information gain, 1 value per time slice */
+	std::vector<double> si_gain;
+	/* hv loss, 1 value per time slice */
+	std::vector<double> hv_loss;
+	/* hv gain, 1 value per time slice */
+	std::vector<double> hv_gain;
+	/* ct_ati_gain , 1 value per time slice */
 	std::vector<double> ct_ati_gain;
 
+
+	/* number of frames which contributed to the calculation per time slice */
+	std::vector<int> n_frames;
+
+	/* chroma spread, 1 value per frame */
 	std::vector<double> chroma_spread;
+	/* chroma extreme, 1 value per frame */
 	std::vector<double> chroma_extreme;
+	/* temporary vector to store chroma befor spatial collapse */ 
 	std::vector<double> chroma_extreme_t;
 
+
+	/* data storage for time collapsed */ 
+	std::vector<double> si_loss_collapsed;
+	std::vector<double> si_gain_collapsed;
+	std::vector<double> hv_loss_collapsed;
+	std::vector<double> hv_gain_collapsed;
+	std::vector<double> ct_ati_gain_collapsed;
+	std::vector<double> chroma_spread_collapsed;
+	std::vector<double> chroma_extreme_collapsed;
+
+	/* path to the log file */
 	std::string logfile_path;
+	/* log level */
 	int log_level;
 
+	/* constants for VQM calculation  */
 	static const double FACTOR_SI_LOSS = -0.2097;
 	static const double FACTOR_SI_GAIN = -2.3416;
 	static const double FACTOR_HV_LOSS = 0.5969;
 	static const double FACTOR_HV_GAIN = 0.2483;
-	static const double FACTOR_CHROMA_SPREAD = 0.0192;
 	static const double FACTOR_CT_ATI_GAIN = 0.0431;
+	static const double FACTOR_CHROMA_SPREAD = 0.0192;
 	static const double FACTOR_CHROMA_EXTREME = 0.0076;
 
 	public:
@@ -95,12 +119,14 @@ class VQM: public Metric{
 		 */
 		double getMetricValue();
 
-		int save(std::string, int, int) ;
+
+		int save(std::string, int, int) ; //necessary?
 
 		/*
-		 * cumulates the results
+		 * cumulates the results, according to 
+		 * 		segment length parameter [number of slices to collapse]
 		 */
-		double timeCollapse();
+		double timeCollapse(int);
 
 		/* 
 		 * Constructor
@@ -108,7 +134,10 @@ class VQM: public Metric{
 		 *
 		 */
 		VQM(std::string, int, int);	
+
+		/* Desctructor */		
 		~VQM();
+
 	private:		
 		double perc_thresh(double, double);
 		double calc_mean(float*, int);
