@@ -27,6 +27,39 @@ SSIM::SSIM(std::string logfile_path, int loglevel){
 	this->loglevel = loglevel;
 }
 
+/* number of frames to cumulate */
+double SSIM::timeCollapse(int nSlices){
+	ssim_cumulated.clear();
+
+	double sum;
+	int n;
+
+	for(std::vector<int>::size_type begin = 0; begin < values.size(); begin+=nSlices) {
+		sum = 0;
+		n = 0;
+		for(int i = 0; i < nSlices && i + begin < values.size(); i++){
+			sum += values[begin + i]*nProcessed[begin + i];		
+			n += nProcessed[begin + i];
+		}
+		ssim_cumulated.push_back(sum/n);	
+	}
+	return 0;
+}
+
+
+/*
+ * Collapse metric value in time, luckily we just have to calculate weighted average...
+ */	
+double SSIM::getMetricValue(std::vector<double> *results){
+	results->clear();
+	for(std::vector<int>::size_type i = 0; i < ssim_cumulated.size(); i+=1) {
+		results->push_back(ssim_cumulated[i]);
+	}	
+
+	return 0;
+
+} 
+
 double SSIM::compute(cv::Mat orig[][3], cv::Mat processed[][3], int nFrames){
 	std::ofstream logfile;
 	logfile.open ((logfile_path + ".csv").c_str(), std::ios::out | std::ios::app ); //open in append mode
@@ -46,19 +79,6 @@ double SSIM::compute(cv::Mat orig[][3], cv::Mat processed[][3], int nFrames){
 	return ssim; 
 }
 
-/*
- * Collapse metric value in time, luckily we just have to calculate weighted average...
- */	
-double SSIM::getMetricValue(){
-	double sum = 0;
-	int n = 0;
-	
-	for(std::vector<int>::size_type i = 0; i != values.size(); i++) {
-		sum += values[i]*nProcessed[i];		
-		n += nProcessed[i];
-	}
-	return sum / n;
-} 
 void SSIM::addCalculation(double val, int nFrames){
 	values.push_back(val);
 	nProcessed.push_back(nFrames);

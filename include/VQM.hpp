@@ -75,6 +75,7 @@ class VQM: public Metric{
 	std::string logfile_path;
 	/* log level */
 	int log_level;
+	int verbose_level;
 
 	/* constants for VQM calculation  */
 	static const double FACTOR_SI_LOSS = -0.2097;
@@ -86,10 +87,6 @@ class VQM: public Metric{
 	static const double FACTOR_CHROMA_EXTREME = 0.0076;
 
 	public:
-		static const int LOG_NONE	 	= 0;		
-		static const int LOG_MINIMAL 	= 1;
-		static const int LOG_DEFAULT 	= 2;
-		static const int LOG_EXCESSIVE 	= 3;
 			
 		/* 
 		 * Computes VQM values
@@ -117,7 +114,7 @@ class VQM: public Metric{
 		 * returns the metric value until now, 
 		 * this is especially helpful when dealing with big files
 		 */
-		double getMetricValue();
+		double getMetricValue(std::vector<double>*);
 
 
 		int save(std::string, int, int) ; //necessary?

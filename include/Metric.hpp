@@ -36,19 +36,38 @@
  */
 
 class Metric{
+
 	public:
+
+		static const int LOG_NONE	 	= 0;		
+		static const int LOG_MINIMAL 	= 1;
+		static const int LOG_DEFAULT 	= 2;
+		static const int LOG_EXCESSIVE 	= 3;
+			
+		static const int VERBOSE_NONE 		= 0;		
+		static const int VERBOSE_MINIMAL	= 1;
+		static const int VERBOSE_DEFAULT	= 2;
+		static const int VERBOSE_EXCESSIVE 	= 3;
+
 	   /* 
 	 	* the computation of a full reference metric takes place within this method 
-		* param1: A sequence of images (reference sequence)
-		* param2: A sequence of images (video sequence)
+		* param1: A sequence of images (reference sequence) [CV32_F , YCrCb color space]
+		* param2: A sequence of images (video sequence) 	[CV32_F , YCrCb color space]
 		* param3: Number of frames to process
 		*/
 		virtual double compute(cv::Mat[][3], cv::Mat[][3], int) = 0;
+
+		/*
+		 * cumulates the results, according to 
+		 * 		segment length parameter [number of slices to collapse]
+		 */
+		double timeCollapse(int);
+
 		/* 
 		 * returns the metric value until now, 
 		 * this is especially helpful when dealing with big files
 		 */
-		virtual double getMetricValue() = 0;
+		virtual double getMetricValue(std::vector<double>*) = 0;
 	 
 	protected:		
 		/******************************/
@@ -94,6 +113,13 @@ class Metric{
 		 * param2: filter
 		 */
 		void getFilterMask(int, float*); 
+	
+		void v(std::string, int, int);
+
+		void v(int, int, int);
+
+		void v(double, int, int);
+ 
 };
 
 #endif

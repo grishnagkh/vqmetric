@@ -122,3 +122,20 @@ void Metric::filter_si_hv_bar(cv::Mat& src, cv::Mat& si, cv::Mat& hvbar, cv::Mat
 	si_filter(src, si, hfil, vfil ,len);
 	hv_bar_filter(si, hfil, vfil, hvbar, hv);
 }
+
+void Metric::v(std::string msg, int level, int target_level){
+	if(level > target_level)
+		std::cout << msg << std::endl;
+}
+
+void Metric::v(int msg, int level, int target_level){
+	if(level > target_level)
+		std::cout << msg << std::endl;
+}
+ 
+
+void Metric::v(double msg, int level, int target_level){
+	if(level > target_level)
+		std::cout << msg << std::endl;
+}
+

@@ -25,6 +25,7 @@
  *
  * 	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --psnr --ssim out
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --psnr --verbose 3
+ *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --ssim --verbose 3
  */
 
 int main(int argc, char **argv){	
@@ -198,7 +199,7 @@ int main(int argc, char **argv){
 	PSNR psnr(out_prefix + "_psnr", LOG_RESULTS);
 	SSIM ssim(out_prefix + "_ssim", LOG_RESULTS);
 
-	VQM vqm(out_prefix + "_vqm", VQM::LOG_EXCESSIVE, VERBOSE_DEBUG); //just until we have vectors, todo rewrite to vectors
+	VQM vqm(out_prefix + "_vqm", Metric::LOG_MINIMAL, verbose); //just until we have vectors, todo rewrite to vectors
 
 	cv::Mat read1[framesPerSlice];
 	cv::Mat read2[framesPerSlice];
@@ -230,21 +231,11 @@ int main(int argc, char **argv){
 		dbg(" frames\n", verbose);
 			
 		if(psnr_flag){
-			dbg( "[debug]  psnr: ", verbose);
-			if(verbose >= VERBOSE_DEBUG)
-				dbg(psnr.compute(ref, proc, i) , verbose);
-			else
-				psnr.compute(ref, proc, i);
-			dbg("\n", verbose);
+			psnr.compute(ref, proc, i);
 		}
 
 		if(ssim_flag){
-			dbg( "[debug]  ssim: ", verbose);
-			if(verbose >= VERBOSE_DEBUG)
-				dbg(ssim.compute(ref, proc, i), verbose);
-			else
-				ssim.compute(ref, proc, i);
-			dbg("\n", verbose);
+			ssim.compute(ref, proc, i);
 		}
 
 		if(vqm_flag){
@@ -252,28 +243,59 @@ int main(int argc, char **argv){
 		}
 	
 	}
-	
-	if(verbose > VERBOSE_SILENT){
-		std::cout << "cumulated PSNR over video " << psnr.getMetricValue() << std::endl;
-		std::cout << "cumulated SSIM over video " << ssim.getMetricValue() << std::endl;
-	}
 
-	dbg("LADIDA, let the cumulation of vqm begin", verbose);
-	
-	//TODO: rewritepsnr, ssim, metric, vqm so that a vector of doubles is a result of getMetricValue
+	std::vector<double> res;
+
+
+	//TODO write results to file; input parameter with segment lengths	
+
+	if(psnr_flag){
+		psnr.timeCollapse(11);
+		psnr.getMetricValue(&res);
+		std::cout << "result length: " << res.size() << std::endl ;
+		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+			std::cout << i << ": " << res[i] << std::endl;
+		}
+		psnr.timeCollapse(20);
+		psnr.getMetricValue(&res);
+		std::cout << "result length: " << res.size() << std::endl ;
+		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+			std::cout << i << ": " << res[i] << std::endl;
+		}
+	}
+	if(ssim_flag){
+		ssim.timeCollapse(7);
+		ssim.getMetricValue(&res);
+		std::cout << "result length: " << res.size() << std::endl ;
+		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+			std::cout << i << ": " << res[i] << std::endl;
+		}
+		ssim.timeCollapse(20);
+		ssim.getMetricValue(&res);
+		std::cout << "result length: " << res.size() << std::endl ;
+		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+			std::cout << i << ": " << res[i] << std::endl;
+		}
+
+	}
 	if(vqm_flag){
-		dbg("collapsing in time 2s..\n", verbose);
-		vqm.timeCollapse(10); //10 0.2second slices...
-		dbg("calculating metric value...\n", verbose);
-		vqm.getMetricValue();
-		dbg("got metric value 2s  ...\n", verbose);
 
-		dbg("collapsing in time 4s..\n", verbose);
-		vqm.timeCollapse(20); //10 0.2second slices...
-		dbg("calculating metric value...\n", verbose);		
-		vqm.getMetricValue();
-		dbg("got metric value 4s ...\n", verbose);
+		vqm.timeCollapse(7); //10 0.2second slices...
+		vqm.getMetricValue(&res);
+		std::cout << "result length: " << res.size() << std::endl ;	
+		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+			std::cout << i << ": " << res[i] << std::endl;
+		}
+		vqm.timeCollapse(11); //10 0.2second slices...
+
+		vqm.getMetricValue(&res);
+		std::cout << "result length: " << res.size() << std::endl ;	
+		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+			std::cout << i << ": " << res[i] << std::endl;
+		}
 	}
+
+
 	dbg("shutting down...", verbose);
 	
 	return 0;	

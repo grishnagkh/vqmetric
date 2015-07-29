@@ -30,7 +30,11 @@
 class SSIM: public Metric{
 
 	std::vector<int> nProcessed; 
+
 	std::vector<double> values; 
+
+	std::vector<double> ssim_cumulated;
+
 	std::string logfile_path;
 	int loglevel;
 
@@ -41,10 +45,12 @@ class SSIM: public Metric{
          * frame. 
 		 */
 		double compute(cv::Mat[][3], cv::Mat[][3], int);
+
+		double timeCollapse(int);
 		/* 
 		 * returns the metric value
 		 */
-		double getMetricValue();
+		double getMetricValue(std::vector<double>* );
 
 		/*
 		 * Constructor, param: number of slices
