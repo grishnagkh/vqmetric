@@ -26,7 +26,10 @@
  * 	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --psnr --ssim out
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --psnr --verbose 3
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --ssim --verbose 3
+ *	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --ssim --psnr --vqm --verbose 1 --log 1 -t 1,2,4
+ *
  */
+
 
 int main(int argc, char **argv){	
 
@@ -45,6 +48,7 @@ int main(int argc, char **argv){
 	int vqm_flag = 0;
 
 	int verbose = 0;
+	int loglvl = 0;
 
 	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling, out_prefix;
 	
@@ -57,6 +61,7 @@ int main(int argc, char **argv){
 				 We distinguish them by their indices. */
 			  {"help",  			no_argument, 		0, 'h'},
 			  {"verbose",  			required_argument, 	0, 'v'},
+			  {"log",  				required_argument, 	0, 'l'},
 			  {"time",  			required_argument,	0, 't'}, // path to source file
 			  {"processed",  		required_argument,	0, 'p'}, // path to source file
 			  {"reference",  		required_argument, 	0, 'r'}, // path to reference file
@@ -69,7 +74,7 @@ int main(int argc, char **argv){
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:vh",
+		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:h",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -108,6 +113,9 @@ int main(int argc, char **argv){
 					printUsage();
 					exit(-1);
 				}
+				break;
+			case 'l':
+				loglvl = optarg[0] - '0';				
 				break;
 			case 'h':
 				printUsage();
@@ -202,9 +210,9 @@ int main(int argc, char **argv){
 
 
 //reserving for 10000 slices,.,, later we will rertie to vectors 
-	PSNR psnr(out_prefix + "_psnr.log", LOG_RESULTS);
-	SSIM ssim(out_prefix + "_ssim.log", LOG_RESULTS);
-	VQM vqm(out_prefix + "_vqm.log", Metric::LOG_DEFAULT, verbose);
+	PSNR psnr(out_prefix + "_psnr.log", loglvl);
+	SSIM ssim(out_prefix + "_ssim.log", loglvl);
+	VQM vqm(out_prefix + "_vqm.log", loglvl, verbose);
 
 
 	cv::Mat read1[framesPerSlice];
@@ -221,18 +229,38 @@ int main(int argc, char **argv){
 	int nSlices = 0;
 	int nFrames = 0;
 
-	while(frame_avail){ 
+	if(verbose >= 0){		
+		std::cout << "read frames:            0";
+	}
+
+	while(frame_avail){
+
 		i = 0;
+
 		while(i < framesPerSlice){
+			
 			frame_avail = rR->nextFrame(read1[i]);
 			frame_avail = frame_avail && pR->nextFrame(read2[i]);
-			if(!frame_avail) break;
+
+			if(!frame_avail) 
+				break;
+	
 			nFrames++;
+			
 			cv::split( read1[i], ref[i] ); 
 			cv::split( read2[i], proc[i] ); 
 
 			i++;
+	
+			if(verbose == VERBOSE){
+				std::cout << string(floor(log(nFrames) / log(10))+1, '\b');	
+				std::cout << nFrames;
+				cout << flush;
+			}	
+
 		}	
+
+
 		if(!i) break; //no frames in slice
 		
 		dbg("[debug]  calculating over ", verbose);
@@ -251,11 +279,14 @@ int main(int argc, char **argv){
 			vqm.compute(ref, proc, i);
 		}
 		
-		nSlices++;
+		nSlices++;	
 	
 	}
 	
 	
+	if(verbose == VERBOSE){
+		std::cout << std::endl;
+	}
 
 	if(timesString.size() == 0){
 		std::cout << "no time argument calculating over video" ;

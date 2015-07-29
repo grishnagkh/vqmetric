@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <sstream>
+#include <math.h>
 
 
 int main(int, char**);
