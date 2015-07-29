@@ -69,7 +69,7 @@ double SSIM::compute(cv::Mat orig[][3], cv::Mat processed[][3], int nFrames){
 	for(int i=0; i<nFrames;i++){
 		tmp = computeSingleFrame(orig[i][0], processed[i][0]);		 //[0].. only on luma channel
 		sum += tmp;
-		if(loglevel == 1){
+		if(loglevel > 0){
 			logfile << tmp << std::endl;
 		}
 	}
