@@ -46,18 +46,18 @@ int main(int argc, char **argv){
 
 	int verbose = 0;
 
-	string processed, reference, procfmt, reffmt, outputmode, scaling, out_prefix;
+	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling, out_prefix;
 	
 	while (1){
 		static struct option long_options[] = {	
 			  {"psnr", no_argument, &psnr_flag, 1},
 			  {"ssim", no_argument, &ssim_flag, 1},
 			  {"vqm",  no_argument, &vqm_flag , 1},
-
  			 /* These options don’t set a flag.
 				 We distinguish them by their indices. */
 			  {"help",  			no_argument, 		0, 'h'},
 			  {"verbose",  			required_argument, 	0, 'v'},
+			  {"time",  			required_argument,	0, 't'}, // path to source file
 			  {"processed",  		required_argument,	0, 'p'}, // path to source file
 			  {"reference",  		required_argument, 	0, 'r'}, // path to reference file
 			  {"processed-format",  required_argument, 	0, 'P'}, // try to estimate by file ending
@@ -69,7 +69,7 @@ int main(int argc, char **argv){
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "p:r:R:P:o:c:vh",
+		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:vh",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -78,7 +78,10 @@ int main(int argc, char **argv){
 		switch (c){
 			case 0:
 				/* If this option set a flag, do nothing else now. */				
-				break;
+			break;
+			case 't':
+				timesString = optarg;
+			break;
 			case 'p':
 				processed = optarg;
 				break;
@@ -190,16 +193,19 @@ int main(int argc, char **argv){
 	dbg(framesPerSlice, verbose);
 	dbg(" frames per slice\n" , verbose);
 
+	remove( (out_prefix + "_psnr.log").c_str() );
+	remove( (out_prefix + "_ssim.log").c_str() );
+	remove( (out_prefix + "_vqm.log").c_str() );
 	remove( (out_prefix + "_psnr.csv").c_str() );
 	remove( (out_prefix + "_ssim.csv").c_str() );
 	remove( (out_prefix + "_vqm.csv").c_str() );
 
 
 //reserving for 10000 slices,.,, later we will rertie to vectors 
-	PSNR psnr(out_prefix + "_psnr", LOG_RESULTS);
-	SSIM ssim(out_prefix + "_ssim", LOG_RESULTS);
+	PSNR psnr(out_prefix + "_psnr.log", LOG_RESULTS);
+	SSIM ssim(out_prefix + "_ssim.log", LOG_RESULTS);
+	VQM vqm(out_prefix + "_vqm.log", Metric::LOG_DEFAULT, verbose);
 
-	VQM vqm(out_prefix + "_vqm", Metric::LOG_MINIMAL, verbose); //just until we have vectors, todo rewrite to vectors
 
 	cv::Mat read1[framesPerSlice];
 	cv::Mat read2[framesPerSlice];
@@ -212,13 +218,16 @@ int main(int argc, char **argv){
 	bool frame_avail = true;
 	int i; //frames grabbed
 
+	int nSlices = 0;
+	int nFrames = 0;
+
 	while(frame_avail){ 
 		i = 0;
 		while(i < framesPerSlice){
 			frame_avail = rR->nextFrame(read1[i]);
 			frame_avail = frame_avail && pR->nextFrame(read2[i]);
 			if(!frame_avail) break;
-
+			nFrames++;
 			cv::split( read1[i], ref[i] ); 
 			cv::split( read2[i], proc[i] ); 
 
@@ -241,65 +250,98 @@ int main(int argc, char **argv){
 		if(vqm_flag){
 			vqm.compute(ref, proc, i);
 		}
+		
+		nSlices++;
 	
 	}
+	
+	
 
-	std::vector<double> res;
-
-
-	//TODO write results to file; input parameter with segment lengths	
-
-	if(psnr_flag){
-		psnr.timeCollapse(11);
-		psnr.getMetricValue(&res);
-		std::cout << "result length: " << res.size() << std::endl ;
-		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-			std::cout << i << ": " << res[i] << std::endl;
-		}
-		psnr.timeCollapse(20);
-		psnr.getMetricValue(&res);
-		std::cout << "result length: " << res.size() << std::endl ;
-		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-			std::cout << i << ": " << res[i] << std::endl;
-		}
-	}
-	if(ssim_flag){
-		ssim.timeCollapse(7);
-		ssim.getMetricValue(&res);
-		std::cout << "result length: " << res.size() << std::endl ;
-		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-			std::cout << i << ": " << res[i] << std::endl;
-		}
-		ssim.timeCollapse(20);
-		ssim.getMetricValue(&res);
-		std::cout << "result length: " << res.size() << std::endl ;
-		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-			std::cout << i << ": " << res[i] << std::endl;
-		}
-
-	}
-	if(vqm_flag){
-
-		vqm.timeCollapse(7); //10 0.2second slices...
-		vqm.getMetricValue(&res);
-		std::cout << "result length: " << res.size() << std::endl ;	
-		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-			std::cout << i << ": " << res[i] << std::endl;
-		}
-		vqm.timeCollapse(11); //10 0.2second slices...
-
-		vqm.getMetricValue(&res);
-		std::cout << "result length: " << res.size() << std::endl ;	
-		for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-			std::cout << i << ": " << res[i] << std::endl;
-		}
+	if(timesString.size() == 0){
+		std::cout << "no time argument calculating over video" ;
+		timesString="2";
 	}
 
+	std::vector<double> res;	
+	vector<string> time_vector = split(timesString, ',');
+	
+	//1 slice hat 0.2 sekunden
+	
+	std::ofstream resfile;
+
+	int time;
+	int slices;
+	for(uint i=0; i<time_vector.size(); i++){
+		
+
+		time = atoi(time_vector[i].c_str());
+		slices = time *5;//   *5  == / 0.2;
+		if(psnr_flag){
+			dbg("psnr time collapse", verbose);
+			psnr.timeCollapse(slices);
+			dbg("psnr get metric value", verbose);
+			psnr.getMetricValue(&res);	
+			dbg("psnr write results", verbose);		
+			
+			resfile.open ((out_prefix + "_psnr.csv").c_str(), std::ios::out | std::ios::app); 
+			resfile << time_vector[i] << "s" << std::endl;
+			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+				resfile << i << "," << res[i] << std::endl;
+				dbg(res[i], verbose);
+			}	
+			resfile.close();
+		}
+		if(ssim_flag){
+			dbg("ssim time collapse", verbose);
+			ssim.timeCollapse(slices);
+			dbg("ssim get metric value", verbose);
+			ssim.getMetricValue(&res);
+			dbg("ssim write results", verbose);	
+	
+			resfile.open ((out_prefix + "_ssim.csv").c_str(), std::ios::out | std::ios::app); 
+			resfile << time_vector[i] << "s" << std::endl;
+			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+				resfile << i << "," << res[i] << std::endl;
+				dbg(res[i], verbose);
+			}
+			resfile.close();
+		}
+		if(vqm_flag){
+			dbg("vqm time collapse", verbose);
+			vqm.timeCollapse(slices);
+			dbg("vqm get metric value", verbose);
+			vqm.getMetricValue(&res);
+			dbg("vqm write results", verbose);	
+
+			resfile.open ((out_prefix + "_vqm.csv").c_str(), std::ios::out | std::ios::app); 
+			resfile << time_vector[i] << "s" << std::endl;
+			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
+				resfile << i << "," << res[i] << std::endl;
+				dbg(res[i], verbose);
+			}	
+			resfile.close();	
+		}
+	}
 
 	dbg("shutting down...", verbose);
 	
 	return 0;	
 }
+
+
+std::vector<string> split(string str, char delimiter) {
+
+  std::vector<string> internal;
+  stringstream ss(str); // Turn the string into a stream.
+  string tok;
+  
+  while(getline(ss, tok, delimiter)) {
+    internal.push_back(tok);
+  }
+  
+  return internal;
+}
+
 void dbg(string x, int verbose){
 	if(verbose >= VERBOSE_DEBUG)
 		std::cout << x;
@@ -326,6 +368,13 @@ void printUsage(){
 
  std::cout << "--psnr\n\tcalculate peak signal to noise ratio" << std::endl;
  std::cout << "--ssim\n\tcalculate structured similarity" << std::endl;
+ std::cout << "--vqm\n\tcalculate vqm" << std::endl;
+
+ std::cout << "-t, --time <t> \n\ttemporally collapse in time" << std::endl;
+ std::cout << "\tt is a comma separated list with segment length in seconds, e.g. 1,2,4 " << std::endl;
+ std::cout << "\tdefault value: 2" << std::endl;
+
+
  std::cout << "-h, --help\n\tprint this message" << std::endl;
  std::cout << "-v <level>, --verbose <level>" << std::endl;
 	std::cout << "\t" << VERBOSE_SILENT << "- silent" << std::endl;

@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <sstream>
 
 
 int main(int, char**);
@@ -41,6 +42,8 @@ void printUsage(void);
 void dbg(string, int);
 void dbg(int, int);
 void dbg(double, int);
+std::vector<string> split(string, char) ;
+
 
 const int VERBOSE_SILENT 	= 0;
 const int VERBOSE 			= 1;

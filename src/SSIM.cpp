@@ -62,7 +62,7 @@ double SSIM::getMetricValue(std::vector<double> *results){
 
 double SSIM::compute(cv::Mat orig[][3], cv::Mat processed[][3], int nFrames){
 	std::ofstream logfile;
-	logfile.open ((logfile_path + ".csv").c_str(), std::ios::out | std::ios::app ); //open in append mode
+	logfile.open ((logfile_path).c_str(), std::ios::out | std::ios::app ); //open in append mode
 
 	double sum = 0;	
 	double tmp = 0;

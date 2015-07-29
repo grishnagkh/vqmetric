@@ -36,7 +36,7 @@ VQM::~VQM(){
 double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 
 	std::ofstream logfile;
-	logfile.open ((logfile_path + ".csv").c_str(), std::ios::out | std::ios::app );
+	logfile.open ((logfile_path).c_str(), std::ios::out | std::ios::app );
 
 	/* input: original frames */ 
 
@@ -521,7 +521,6 @@ double VQM::timeCollapse(int nSlices){
 	/* [ct_ati_gain (9)] Temporally collapse by sorting values in time 
 		and selecting the 10% level.  */
 
-	//std::vector<double> cloned_ct_ati_gain(ct_ati_gain.begin() , ct_ati_gain.end() );
 	std::vector<double> cloned_ct_ati_gain(ct_ati_gain);
 
 	for(uint segmentStart = 0; 
@@ -545,7 +544,6 @@ double VQM::timeCollapse(int nSlices){
 	v("\t[debug] time si loss", this->verbose_level, VERBOSE_MINIMAL );
 
 	std::vector<double> cloned_si_loss(si_loss);
-//	std::vector<double> cloned_si_loss(si_loss.begin() , si_loss.end() );
 
 	for(uint segmentStart = 0; segmentStart < si_loss.size(); segmentStart += nSlices){
 		
@@ -590,7 +588,6 @@ double VQM::timeCollapse(int nSlices){
 
 	/* (chroma_spread 5) Temporally collapse by sorting the values in time
 		 and selecting the 10% level*/ 
-	//std::vector<double> cloned_chroma_spread(chroma_spread.begin() , chroma_spread.end() );
 
 	std::vector<double> cloned_chroma_spread(chroma_spread);
 	
@@ -615,14 +612,6 @@ double VQM::getMetricValue(std::vector<double> *results){
 	
 	/* calculate vqm per segment */ 
 	int nSegments = si_gain_collapsed.size();
-	
-	std::cout << si_loss_collapsed.size() << std::endl;
-	std::cout << si_gain_collapsed.size() << std::endl;
-	std::cout << hv_loss_collapsed.size() << std::endl;
-	std::cout << hv_gain_collapsed.size() << std::endl;
-	std::cout << ct_ati_gain_collapsed.size() << std::endl;
-	std::cout << chroma_spread_collapsed.size() << std::endl;
-	std::cout << chroma_extreme_collapsed.size() << std::endl;
 	
 	double vqm_val;
 

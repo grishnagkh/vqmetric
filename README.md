@@ -35,6 +35,13 @@ Compilation tested with Ubuntu 14.0.4 and OpenCV 2.4.8.0
 
 	calculate structured similarity
 
+-t, --time <t> 
+	
+	temporally collapse in time
+	t is a comma separated list with segment length in seconds, e.g. 1,2,4 
+	default value: 2
+
+
 -h, --help
 
 	print this message
