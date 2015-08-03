@@ -27,7 +27,7 @@
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --psnr --verbose 3
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --ssim --verbose 3
  *	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --ssim --psnr --vqm --verbose 1 --log 1 -t 1,2,4
- *	./vqtool -p processed.mp4 -P mp4 -r reference.mp4 -R mp4 --ssim --psnr --verbose 1 --log 1 -t 1,2,4,8
+ *	./vqtool -p processed.mp4 -P mp4 -r reference.mp4 -R mp4 --ssim --psnr --verbose 1 --log 1 -t 1,2,4,6,8
  *
  */
 
@@ -205,12 +205,7 @@ int main(int argc, char **argv){
 	remove( (out_prefix + "_psnr.log").c_str() );
 	remove( (out_prefix + "_ssim.log").c_str() );
 	remove( (out_prefix + "_vqm.log").c_str() );
-//	remove( (out_prefix + "_psnr.csv").c_str() );
-//	remove( (out_prefix + "_ssim.csv").c_str() );
-//	remove( (out_prefix + "_vqm.csv").c_str() );
 
-
-//reserving for 10000 slices,.,, later we will rertie to vectors 
 	PSNR psnr(out_prefix + "_psnr.log", loglvl);
 	SSIM ssim(out_prefix + "_ssim.log", loglvl);
 	VQM vqm(out_prefix + "_vqm.log", loglvl, verbose);
@@ -308,7 +303,7 @@ int main(int argc, char **argv){
 		
 
 		time = atoi(time_vector[i].c_str());
-		slices = time *5;//   *5  == / 0.2;
+		slices = time * rR->getFps()/ framesPerSlice;
 		if(psnr_flag){
 			dbg("psnr time collapse", verbose);
 			psnr.timeCollapse(slices);
@@ -321,7 +316,7 @@ int main(int argc, char **argv){
 			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
 
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-				resfile << i << "," << res[i] << std::endl;
+				resfile << i << ";" << res[i] << std::endl;
 				dbg(res[i], verbose);
 			}	
 			resfile.close();
@@ -338,7 +333,7 @@ int main(int argc, char **argv){
 			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
 
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-				resfile << i << "," << res[i] << std::endl;
+				resfile << i << ";" << res[i] << std::endl;
 				dbg(res[i], verbose);
 			}
 			resfile.close();
@@ -355,7 +350,7 @@ int main(int argc, char **argv){
 			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
 
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
-				resfile << i << "," << res[i] << std::endl;
+				resfile << i << ";" << res[i] << std::endl;
 				dbg(res[i], verbose);
 			}	
 			resfile.close();	
