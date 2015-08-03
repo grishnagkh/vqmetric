@@ -34,7 +34,7 @@ VQM::~VQM(){
  * computes parts of VQM metrics for a .2 second slice 
  */	
 double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
-
+//TODO: debug; einzelwerte sollten passen, beim zusammenführen les ich wsl irgendwo noch zu viel aus denk ich... mal im debug modus starten... eeeerm und ct_ati_gain liefert immer 0 zurück -> nachschaun, was da verbockt is
 	std::ofstream logfile;
 	logfile.open ((logfile_path).c_str(), std::ios::out | std::ios::app );
 
@@ -57,6 +57,8 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 	 * 		chroma spread 
 	 *		chroma extreme
   	 */
+
+
 
 	int h = ref[0][0].rows;
 	int w = ref[0][0].cols;
@@ -94,13 +96,17 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 		*/
 		absdiff(proc[i][Y], proc[i-1][Y], ati_processed[i-1]);
 		absdiff(ref[i][Y],  ref[i-1][Y],  ati_reference[i-1]);
+
 	}
-	v("[debug] calculating chroma_spread and chroma_extreme",
-		 this->verbose_level, VERBOSE_MINIMAL );
+	v("[debug] calculating chroma_spread and chroma_extreme", this->verbose_level, VERBOSE_MINIMAL );
+
+
 
 	float cr_mean_p, cb_mean_p;
 	float cr_mean_r, cb_mean_r;
 	float tx, ex, ex2;
+	int w_size_x = 8;	
+	int w_size_y = 8;
 	/* (chroma spread 1) Divide the CB and CR color planes 
 		into separate 8 pixel x 8 line x 1 frame S-T regions. */
 	for(int i=0; i< nFrames; i++){
@@ -108,23 +114,24 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 		ex = 0;
 		ex2 = 0;
 		chroma_extreme_t.clear();
-		for(int x = 0; x < w; x+=8){	
+		for(int x = 0; x < w - w_size_x; x+=w_size_x){	
 			cr_mean_p = cb_mean_p = 0;
 			cr_mean_r = cb_mean_r = 0;
-			for(int y = 0; y < h; y+=8){	
+			for(int y = 0; y < h - w_size_y; y+=w_size_y){	
 
 				/* (chroma spread 2) Compute the mean of each S-T region. 
 					Multiply the CR means by 1.5 to increase the perceptual
 					weighting of the red color component in the next step. 
 				*/
-				tmp = cv::Mat( ref[CB][i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat( ref[CB][i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				cb_mean_r = ( cv::mean(tmp)[0] );
-				tmp = cv::Mat( ref[CR][i],  cv::Rect(x, y, 8, 8));
+				tmp = cv::Mat( ref[CR][i],  cv::Rect(x, y, w_size_x, w_size_y));
 				cr_mean_r = 1.5 * ( cv::mean(tmp)[0] );
-				tmp = cv::Mat(proc[CB][i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(proc[CB][i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				cb_mean_p = ( cv::mean(tmp)[0] );
-				tmp = cv::Mat(proc[CR][i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(proc[CR][i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				cr_mean_p = 1.5 * ( cv::mean(tmp)[0] );
+
 				/* (chroma spread 3) Compare original and processed feature streams 
 					CB and CR using Euclidean distance (see equation 2). */
 				tx = euclideansq(cb_mean_r, cr_mean_r, cb_mean_p, cr_mean_p);
@@ -135,6 +142,7 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 				chroma_extreme_t.push_back(tx);				
 			}			
 		}
+
 		/* (chroma_spread 4) Spatially collapse by computing the standard deviation of blocks for each 1-frame slice of time. */
 		ex  /= w/8*h/8;
 		ex2 /= w/8*h/8;
@@ -143,7 +151,6 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 		if(this->log_level > LOG_MINIMAL){
 			logfile << "chroma_spread: " << sqrt(ex2-ex*ex) << std::endl;
 		}
-
 		/* 
 	(chroma_extreme 2) Spatially collapse by computing for each slice of time the average of the worst 1% of blocks (i.e., rank-sorted values from the 99% level to the 100% level), and subtract from that result the 99% level. This identifies very bad distortions that impact a small portion of the image.
 		*/
@@ -161,8 +168,7 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 		}
 	}
 	 
-	v("[debug] calculating si/hv gain/loss",
-		 this->verbose_level, VERBOSE_MINIMAL );
+	v("[debug] calculating si/hv gain/loss", this->verbose_level, VERBOSE_MINIMAL );
 
 
 
@@ -181,13 +187,18 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 	float hv_ratio_p = 0;
 	float hv_ratio_r = 0;
 
-	std::vector<float> si_loss_t(w/8*h/8);
-	float si_gain_t = 0;
-	std::vector<float> hv_loss_t(w/8*h/8);
-	std::vector<float> hv_gain_t(w/8*h/8);
+	w_size_x = 8;
+	w_size_y = 8;
 
-	for(int x = 0; x < w; x+=8){
-		for(int y = 0; y < h; y+=8){	
+	std::vector<float> si_loss_t(w/w_size_x*h/w_size_y);
+	float si_gain_t = 0;
+	std::vector<float> hv_loss_t(w/w_size_x*h/w_size_y);
+	std::vector<float> hv_gain_t(w/w_size_x*h/w_size_y);
+
+
+
+	for(int x = 0; x < w-w_size_x; x+=w_size_x){
+		for(int y = 0; y < h-w_size_y; y+=w_size_y){	
 			si_p_ex = 0;
 			si_p_ex2 = 0;
 			si_r_ex = 0;
@@ -197,24 +208,24 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 			hv_bar_p_ex = 0;
 			hv_bar_r_ex = 0;
 			for(int i=0; i< nFrames; i++){
-				tmp = cv::Mat(si_reference[i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(si_reference[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				si_r_ex  += ( cv::mean(tmp)[0] );
 				si_r_ex2 += ( cv::mean(tmp.mul(tmp))[0] );
 
-				tmp = cv::Mat(si_processed[i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(si_processed[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				si_p_ex  += ( cv::mean(tmp)[0] );
 				si_p_ex2 += ( cv::mean(tmp.mul(tmp))[0] );
 
-				tmp = cv::Mat(hv_reference[i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(hv_reference[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				hv_r_ex  += ( cv::mean(tmp)[0] );
 
-				tmp = cv::Mat(hv_processed[i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(hv_processed[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				hv_p_ex  += ( cv::mean(tmp)[0] );
 
-				tmp = cv::Mat(hv_bar_reference[i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(hv_bar_reference[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				hv_bar_r_ex  += ( cv::mean(tmp)[0] );
 
-				tmp = cv::Mat(hv_bar_processed[i],  cv::Rect(x, y, 8, 8));	
+				tmp = cv::Mat(hv_bar_processed[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				hv_bar_p_ex  += ( cv::mean(tmp)[0] );
 			}
 			si_p_ex 	/= nFrames;
@@ -282,7 +293,7 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
   
 
 	/* [si_gain (4) ] spatially collapse by computing the average of all blocks */
-	si_gain_t /= nFrames * w/8 * h/8;
+	si_gain_t /= nFrames * w/w_size_x * h/w_size_y;
 	
 	si_gain.push_back(si_gain_t); 
 
@@ -346,6 +357,7 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 	if(this->log_level > LOG_MINIMAL){
 		logfile << "si_loss: "<< avg << std::endl; 
 	}
+
 	v("[debug] calculating ct_ati_gain ",
 		 this->verbose_level, VERBOSE_MINIMAL );
 
@@ -362,9 +374,11 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 	avg = 0;
 	ctr = 0;
 
-	for(int x = 0; x < w; x+=4){
-		for(int y = 0; y < h; y+=4){	
+	w_size_x = 40;
+	w_size_y = 40;
 
+	for(int x = 0; x < w - w_size_x; x+=w_size_x){
+		for(int y = 0; y < h - w_size_y; y+=w_size_y){	
 			p_ex 	= 0;
 			p_ex2	= 0;
 			r_ex	= 0;
@@ -374,56 +388,56 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 			c_r_ex	= 0;
 			c_r_ex2	= 0;
 
-
-			for(int i=0; i< nFrames-1; i++){
-				/*	
-					[ct_ati_gain (2)] 
-					Divide each video sequence into 4 pixel x 4 line x 0.2 second S-T regions. 
-				*/
-				tmp = cv::Mat(ati_processed[i],  cv::Rect(x, y, 4, 4));	
+			/*	
+				[ct_ati_gain (2)] 
+				Divide each video sequence into 4 pixel x 4 line x 0.2 second S-T regions. 
+			*/		
 				
+			for(int i=0; i< nFrames-1; i++){
+			
 				/*	[ct_ati_gain (3)] Compute the standard deviation of each S-T region. */
 				/*	[ct_ati_gain (5)] Repeat steps 2 through 4 on the Y luminance 
 					video sequence (without perceptual filtering) to form 
 					“contrast” feature streams. 
 				*/	
+				tmp = cv::Mat(ati_processed[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				p_ex  += ( cv::mean(tmp)[0] );
 				p_ex2 += ( cv::mean(tmp.mul(tmp))[0] );
 
-				tmp = cv::Mat(ati_reference[i],  cv::Rect(x, y, 4, 4));	
+
+
+
+				tmp = cv::Mat(ati_reference[i],  cv::Rect(x, y, w_size_x, w_size_y));	
 				r_ex  += ( cv::mean(tmp)[0] );
 				r_ex2 += ( cv::mean(tmp.mul(tmp))[0] );
 
-				tmp = cv::Mat(proc[i][Y],  cv::Rect(x, y, 4, 4));	
-				
+				tmp = cv::Mat(proc[i][Y],  cv::Rect(x, y, w_size_x, w_size_y));
 				c_p_ex  += ( cv::mean(tmp)[0] );
 				c_p_ex2 += ( cv::mean(tmp.mul(tmp))[0] );
 
-				tmp = cv::Mat(ref[i][Y],  cv::Rect(x, y, 4, 4));
+				tmp = cv::Mat(ref[i][Y],  cv::Rect(x, y, w_size_x, w_size_y));
 				c_r_ex  += ( cv::mean(tmp)[0] );
 				c_r_ex2 += ( cv::mean(tmp.mul(tmp))[0] );
-			}			
+			}	
+
 			/*
 				VAR(X) = E(X)^2 - E(X^2)
-			*/
-	
-			p_ex 	/= nFrames-1;
-			p_ex2 	/= nFrames-1;
-			r_ex 	/= nFrames-1;
-			r_ex2 	/= nFrames-1;
-			c_p_ex	/= nFrames-1;
-			c_p_ex2	/= nFrames-1;
-			c_r_ex	/= nFrames-1;
-			c_r_ex2	/= nFrames-1;
+			 */	
 
 		/*	[ct_ati_gain (6)] Multiply the contrast and ATI feature streams. */
 
-			fsp = perc_thresh(p_ex*p_ex - p_ex2, 3)  * perc_thresh(c_p_ex*c_p_ex - c_p_ex2, 3)  ;
-			fsr = perc_thresh(r_ex*r_ex - r_ex2, 3)  * perc_thresh(c_r_ex*c_r_ex - c_r_ex2, 3)  ;
-
+			fsp = sqrt(
+					perc_thresh( p_ex*p_ex - p_ex2, 9) 
+					* perc_thresh( c_p_ex*c_p_ex - c_p_ex2, 9)  
+			);
+			fsr = sqrt(
+					perc_thresh( r_ex*r_ex - r_ex2, 9) 
+					* perc_thresh( c_r_ex*c_r_ex - c_r_ex2, 9)  
+			);
 
 			/*	[ct_ati_gain (7)] Compare original and processed feature streams (each computed using steps 1 through 6) using the ratio comparison function (see equation 3) followed by the gain function. */
 			avg += gain(ratioComp(fsr, fsp));	
+
 			ctr++;
 		}
 	}
@@ -529,6 +543,7 @@ double VQM::timeCollapse(int nSlices){
 
 		len = uint(nSlices) > ct_ati_gain.size() - segmentStart ?
 					ct_ati_gain.size() - segmentStart : nSlices;
+
 		at = len * n_frames[segmentStart/nSlices] * 0.1;
 
 		std::sort (	cloned_ct_ati_gain.begin() + segmentStart, 
@@ -653,7 +668,7 @@ double VQM::getMetricValue(std::vector<double> *results){
 		v("[debug] vqm value: : " , this->verbose_level, VERBOSE_DEFAULT );
 		
 
-		vqm_val = 1 - 
+		vqm_val =  
 			si_loss_collapsed[i] * FACTOR_SI_LOSS +
 			si_gain_collapsed[i] * FACTOR_SI_GAIN +
 			hv_loss_collapsed[i] * FACTOR_HV_LOSS +
@@ -661,7 +676,19 @@ double VQM::getMetricValue(std::vector<double> *results){
 			ct_ati_gain_collapsed[i] * FACTOR_CT_ATI_GAIN +
 			chroma_spread_collapsed[i] * FACTOR_CHROMA_SPREAD +
 			chroma_extreme_collapsed[i] * FACTOR_CHROMA_EXTREME;
-		
+
+		//clip to a lower threshold of 0
+		vqm_val = clip(vqm_val, 0);		
+		//crushing function
+		if(vqm_val > 1){
+			vqm_val = (1.5) * vqm_val / (0.5+vqm_val);
+		}
+		//inverse
+		vqm_val = 1-vqm_val;
+
+		//clip again, for avoiding negative values
+		vqm_val = clip(vqm_val, 0);		
+
 		v(vqm_val, this->verbose_level, VERBOSE_DEFAULT );
 
 		results->push_back(vqm_val);
@@ -688,11 +715,11 @@ double VQM::euclideansq(double fo1, double fo2, double fp1, double fp2){
 	double t2 = (fo2 - fp2) ;
 	return t1*t1 + t2*t2;
 }
-double VQM::ratioComp(double orig, double processed){
-	return (processed-orig)/orig;
+double VQM::ratioComp(double reference, double processed){
+	return (processed-reference)/reference;
 }
-double VQM::logComp(double orig, double processed){
-	return log10(processed/orig);
+double VQM::logComp(double reference, double processed){
+	return log10(processed/reference);
 }
  
 double VQM::clip(double p, double t){
