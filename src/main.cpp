@@ -27,6 +27,7 @@
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --psnr --verbose 3
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --ssim --verbose 3
  *	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --ssim --psnr --vqm --verbose 1 --log 1 -t 1,2,4
+ *	./vqtool -p processed.mp4 -P mp4 -r reference.mp4 -R mp4 --ssim --psnr --verbose 1 --log 1 -t 1,2,4,8
  *
  */
 
@@ -204,9 +205,9 @@ int main(int argc, char **argv){
 	remove( (out_prefix + "_psnr.log").c_str() );
 	remove( (out_prefix + "_ssim.log").c_str() );
 	remove( (out_prefix + "_vqm.log").c_str() );
-	remove( (out_prefix + "_psnr.csv").c_str() );
-	remove( (out_prefix + "_ssim.csv").c_str() );
-	remove( (out_prefix + "_vqm.csv").c_str() );
+//	remove( (out_prefix + "_psnr.csv").c_str() );
+//	remove( (out_prefix + "_ssim.csv").c_str() );
+//	remove( (out_prefix + "_vqm.csv").c_str() );
 
 
 //reserving for 10000 slices,.,, later we will rertie to vectors 
@@ -302,6 +303,7 @@ int main(int argc, char **argv){
 
 	int time;
 	int slices;
+	std::string filename;
 	for(uint i=0; i<time_vector.size(); i++){
 		
 
@@ -313,9 +315,11 @@ int main(int argc, char **argv){
 			dbg("psnr get metric value", verbose);
 			psnr.getMetricValue(&res);	
 			dbg("psnr write results", verbose);		
-			
-			resfile.open ((out_prefix + "_psnr.csv").c_str(), std::ios::out | std::ios::app); 
-			resfile << time_vector[i] << "s" << std::endl;
+
+			filename = out_prefix + "_psnr_" + time_vector[i] + "s.csv";
+			remove( filename.c_str() ); //remove file if exists
+			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
+
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
 				resfile << i << "," << res[i] << std::endl;
 				dbg(res[i], verbose);
@@ -329,8 +333,10 @@ int main(int argc, char **argv){
 			ssim.getMetricValue(&res);
 			dbg("ssim write results", verbose);	
 	
-			resfile.open ((out_prefix + "_ssim.csv").c_str(), std::ios::out | std::ios::app); 
-			resfile << time_vector[i] << "s" << std::endl;
+			filename = out_prefix + "_ssim_" + time_vector[i] + "s.csv";
+			remove( filename.c_str() ); //remove file if exists
+			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
+
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
 				resfile << i << "," << res[i] << std::endl;
 				dbg(res[i], verbose);
@@ -344,8 +350,10 @@ int main(int argc, char **argv){
 			vqm.getMetricValue(&res);
 			dbg("vqm write results", verbose);	
 
-			resfile.open ((out_prefix + "_vqm.csv").c_str(), std::ios::out | std::ios::app); 
-			resfile << time_vector[i] << "s" << std::endl;
+			filename = out_prefix + "_vqm_" + time_vector[i] + "s.csv";
+			remove( filename.c_str() ); //remove file if exists
+			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
+
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
 				resfile << i << "," << res[i] << std::endl;
 				dbg(res[i], verbose);
