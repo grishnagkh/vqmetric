@@ -225,7 +225,7 @@ int main(int argc, char **argv){
 	int nSlices = 0;
 	int nFrames = 0;
 
-	if(verbose >= 0){		
+	if(verbose > 0){		
 		std::cout << "read frames:            0";
 	}
 
