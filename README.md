@@ -35,6 +35,10 @@ Compilation tested with Ubuntu 14.0.4 and OpenCV 2.4.8.0
 
 	calculate structured similarity
 
+--vqm 
+
+	calculate video quality metric
+
 -t, --time <t> 
 	
 	temporally collapse in time
@@ -56,6 +60,14 @@ Compilation tested with Ubuntu 14.0.4 and OpenCV 2.4.8.0
 
 	3- verbose debug
 
+-l <level>, --log <level>
+
+	0- log silent
+
+	1- log psnr and ssim per frame
+
+	3- additionally log vqm 
+
 sample call
 
 	./vqtool -p <processed video> -r <reference video> --psnr --ssim out
@@ -70,13 +82,12 @@ sample call
 
 Tested input formats are 
  * mp4
- * y4m (opencv version, seems to interpret header as frames)
+ * y4m (YUV420)
   
 ##### Work in Progress
 
  * Features
    * MSSSIM
-   * VQM
  * Support for different resolutions
   
  
