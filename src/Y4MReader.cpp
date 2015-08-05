@@ -167,22 +167,26 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
     }
  
 	/*header parsing end */
-		
 
 	frame_w[Y] = w;	
 	frame_h[Y] = h;	
 	
 	/* calculate frame length without header */
 	if(pixfmt ==  YUV420){
-		frame_w[V] = frame_w[U] = w  >> 1;
+		frame_w[V] = frame_w[U] = w >> 1;
 		frame_h[V] = frame_h[U] = h >> 1;
+	}else if(pixfmt ==  YUV422){
+		//to be tested
+		frame_h[V] = frame_h[U] = h;
+		frame_w[V] = frame_w[U] = w >> 1;
+	}else if(pixfmt ==  YUV444){
+		//to be tested
+		frame_h[V] = frame_h[U] = h;
+		frame_w[V] = frame_w[U] = w;
+	}else{
+		std::cerr << "unsupported input format" << std::endl; 
+		exit(-1);
 	}
-	if(pixfmt ==  YUV422){
-		//TODO
-	}
-	if(pixfmt ==  YUV444){
-		//TODO
-	}	
 }
 
 Y4MReader::~Y4MReader(){
@@ -204,14 +208,10 @@ bool Y4MReader::nextFrame(cv::Mat& theFrame){
 			break;
 		}				
 	}
-		
-//debug print;		
-		if(	!(strncmp("FRAME",f_header, 5) == 0 ))
-			return false;
-//debug print end;
 
+	if(	!(strncmp("FRAME",f_header, 5) == 0 ))
+		return false;
 
-// lets add to the ycrCb YUV msiunderstanding^^, seriously read up and correct if necessary
 	uchar bufferY[frame_w[Y] * frame_h[Y]]; 
 	uchar bufferU[frame_w[U] * frame_h[U]]; 
 	uchar bufferV[frame_w[V] * frame_h[V]]; 
