@@ -77,6 +77,7 @@ sample call
 
  * PSNR
  * SSIM
+ * VQM
  
 #### Supported Input Formats
 
