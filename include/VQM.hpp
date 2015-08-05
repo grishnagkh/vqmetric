@@ -58,9 +58,6 @@ class VQM: public Metric{
 	std::vector<double> chroma_spread;
 	/* chroma extreme, 1 value per frame */
 	std::vector<double> chroma_extreme;
-	/* temporary vector to store chroma befor spatial collapse */ 
-	std::vector<double> chroma_extreme_t;
-
 
 	/* data storage for time collapsed */ 
 	std::vector<double> si_loss_collapsed;

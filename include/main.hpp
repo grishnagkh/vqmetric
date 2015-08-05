@@ -37,12 +37,14 @@
 #include <sstream>
 #include <math.h>
 
-
 int main(int, char**);
+
 void printUsage(void);
+
 void dbg(string, int);
 void dbg(int, int);
 void dbg(double, int);
+
 std::vector<string> split(string, char) ;
 
 

@@ -43,19 +43,20 @@ class Y4MReader: public VideoReader{
  	const static int YUV422 = 2;
  	const static int YUV444 = 3;
 
- 	const static int Y = 0;
- 	const static int V = 1; // Cb
- 	const static int U = 2; // Cr
+ 	const static int Y = 0;	// Y luminance channel id
+ 	const static int V = 1; // Cb chrominance channel id
+ 	const static int U = 2; // Cr chrominance channel id
 
-	int pixfmt;
-	int w, h;
-	int raten; // nominator of frame rate
-	int rated; // denominator of frame rate
-	int aspectn; // nominator of pixel aspect
-	int aspectd; // denominator of pixel aspect
-	int pos;  //actual pos in the file
-	int frame_w[3]; //frame width per channel
-	int frame_h[3]; //frame height per channel
+	int pixfmt;		/* pixel format */
+	int w, h;		/* video width, videh height */
+	int raten; 		/* nominator of frame rate */
+	int rated; 		/* denominator of frame rate */
+	int aspectn; 	/* nominator of pixel aspect */
+	int aspectd; 	/* denominator of pixel aspect */
+	int pos;  		/* actual pos in the file */
+	int frame_w[3]; /* frame width per channel */
+	int frame_h[3]; /* frame height per channel */
+
 	public:	
 		~Y4MReader();
 		Y4MReader(string x);
