@@ -28,7 +28,7 @@
  *  ./vqtool -p test.y4m -P y4m -r test.y4m -R y4m --ssim --verbose 3
  *	./vqtool -p 500.mp4 -P mp4 -r 1000.mp4 -R mp4 --ssim --psnr --vqm --verbose 1 --log 1 -t 1,2,4
  *	./vqtool -p processed.mp4 -P mp4 -r reference.mp4 -R mp4 --ssim --psnr --verbose 1 --log 1 -t 1,2,4,6,8
- *
+ *  ./vqtool -p processed.mp4 -P mp4 -r reference.mp4 -R mp4 --vqm --verbose 1 --log 3 -t 1,2,4,6,8
  */
 
 
@@ -51,7 +51,7 @@ int main(int argc, char **argv){
 	int verbose = 0;
 	int loglvl = 0;
 
-	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling, out_prefix;
+	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling="auto", out_prefix;
 	
 	while (1){
 		static struct option long_options[] = {	
@@ -184,15 +184,10 @@ int main(int argc, char **argv){
 		//return -1;
 	}
 	dbg("[debug] requesting video width...\n", verbose);
-	if(rR->getVideoWidth() != pR->getVideoWidth()){
-		std::cout << "original and processed video have different widths, we abort here";
-		std::cout << " (scaling not implemented yet)";
-		return -1;
-	}
-	dbg("[debug] requesting video height...\n", verbose);
-	if(rR->getVideoHeight() != pR->getVideoHeight()){
-		std::cout << "original and processed video have different heights, we abort here";
-		std::cout << " (scaling not implemented yet)";
+	if(rR->getVideoWidth() != pR->getVideoWidth() 
+			|| rR->getVideoHeight() != pR->getVideoHeight()){
+		std::cout << "original and processed video have different dimensions, we scale using method " << scaling << std::endl;
+		std::cout << " (scaling not implemented yet)" << std::endl;
 		return -1;
 	}
 	
@@ -225,7 +220,7 @@ int main(int argc, char **argv){
 	int nSlices = 0;
 	int nFrames = 0;
 
-	if(verbose > 0){		
+	if(verbose == VERBOSE){		
 		std::cout << "read frames:            0";
 	}
 
@@ -301,10 +296,12 @@ int main(int argc, char **argv){
 	std::string filename;
 	for(uint i=0; i<time_vector.size(); i++){
 		
-
 		time = atoi(time_vector[i].c_str());
 		slices = time * rR->getFps()/ framesPerSlice;
+
 		if(psnr_flag){
+			res.clear();
+
 			dbg("psnr time collapse", verbose);
 			psnr.timeCollapse(slices);
 			dbg("psnr get metric value", verbose);
@@ -314,7 +311,6 @@ int main(int argc, char **argv){
 			filename = out_prefix + "_psnr_" + time_vector[i] + "s.csv";
 			remove( filename.c_str() ); //remove file if exists
 			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
-
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
 				resfile << i << ";" << res[i] << std::endl;
 				dbg(res[i], verbose);
@@ -322,6 +318,8 @@ int main(int argc, char **argv){
 			resfile.close();
 		}
 		if(ssim_flag){
+			res.clear();
+
 			dbg("ssim time collapse", verbose);
 			ssim.timeCollapse(slices);
 			dbg("ssim get metric value", verbose);
@@ -330,8 +328,7 @@ int main(int argc, char **argv){
 	
 			filename = out_prefix + "_ssim_" + time_vector[i] + "s.csv";
 			remove( filename.c_str() ); //remove file if exists
-			resfile.open (filename.c_str(), std::ios::out | std::ios::app); 
-
+			resfile.open (filename.c_str(), std::ios::out | std::ios::app);
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
 				resfile << i << ";" << res[i] << std::endl;
 				dbg(res[i], verbose);
@@ -339,6 +336,8 @@ int main(int argc, char **argv){
 			resfile.close();
 		}
 		if(vqm_flag){
+			res.clear();
+
 			dbg("vqm time collapse", verbose);
 			vqm.timeCollapse(slices);
 			dbg("vqm get metric value", verbose);
@@ -351,7 +350,7 @@ int main(int argc, char **argv){
 
 			for(std::vector<int>::size_type i = 0; i < res.size(); i+=1) {
 				resfile << i << ";" << res[i] << std::endl;
-				dbg(res[i], verbose);
+				std::cout << res[i];
 			}	
 			resfile.close();	
 		}

@@ -51,11 +51,9 @@ double SSIM::timeCollapse(int nSlices){
  * Collapse metric value in time, luckily we just have to calculate weighted average...
  */	
 double SSIM::getMetricValue(std::vector<double> *results){
-	results->clear();
 	for(std::vector<int>::size_type i = 0; i < ssim_cumulated.size(); i+=1) {
 		results->push_back(ssim_cumulated[i]);
 	}	
-
 	return 0;
 
 } 

@@ -45,7 +45,6 @@ double PSNR::timeCollapse(int nSlices){
 }
 
 double PSNR::getMetricValue(std::vector<double> *results){
-	results->clear();
 	for(std::vector<int>::size_type i = 0; i < psnr_cumulated.size(); i+=1) {
 		results->push_back(psnr_cumulated[i]);
 	}	
