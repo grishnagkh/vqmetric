@@ -28,3 +28,5 @@ ${OBJDIR}/%.o: %.cpp
 clean:
 	${RM} ${EXEC_NAME} 
 	${RM} ${OBJDIR}
+install:
+	cp ${EXEC_NAME} /usr/bin
