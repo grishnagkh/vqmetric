@@ -6,4 +6,5 @@ build/
 *.jpg
 *.m
 *.pdf
-
+*.csv
+*.log
