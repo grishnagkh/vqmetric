@@ -46,9 +46,9 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
 				
 //debug print;
 	
-	printf("YUV header %s\n", &header[0]);
+//	printf("YUV header %s\n", &header[0]);
 
-	cout << endl;
+//	cout << endl;
 	
 //debug print end				
 
@@ -75,62 +75,62 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
             break;
         case 'C': // Color space, TODO see https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/yuv4mpegdec.c
             if (strncmp("420jpeg", tokstart, 7) == 0) {
-               
+				pixfmt = YUV420;
             } else if (strncmp("420mpeg2", tokstart, 8) == 0) {
-               
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("420paldv", tokstart, 8) == 0) {
-               
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("420p16", tokstart, 6) == 0) {
-                
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("422p16", tokstart, 6) == 0) {
-                
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("444p16", tokstart, 6) == 0) {
-                
+  				std::cout << "pixel format not supported, trying 420p " << std::endl;
             } else if (strncmp("420p14", tokstart, 6) == 0) {
-                
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("422p14", tokstart, 6) == 0) {
-                
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("444p14", tokstart, 6) == 0) {
-                
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("420p12", tokstart, 6) == 0) {
-               
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("422p12", tokstart, 6) == 0) {
-               
+				std::cout << "pixel format not supported, trying 420p " << std::endl;
             } else if (strncmp("444p12", tokstart, 6) == 0) {
-               
+				std::cout << "pixel format not supported, trying 420p " << std::endl;
             } else if (strncmp("420p10", tokstart, 6) == 0) {
-               
+				std::cout << "pixel format not supported, trying 420p " << std::endl;
             } else if (strncmp("422p10", tokstart, 6) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("444p10", tokstart, 6) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("420p9", tokstart, 5) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("422p9", tokstart, 5) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("444p9", tokstart, 5) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("420", tokstart, 3) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("411", tokstart, 3) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("422", tokstart, 3) == 0) {
-
+				pixfmt = YUV422;
             } else if (strncmp("444alpha", tokstart, 8) == 0 ) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("444", tokstart, 3) == 0) {
-
+				pixfmt = YUV444;
             } else if (strncmp("mono16", tokstart, 6) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else if (strncmp("mono", tokstart, 4) == 0) {
-
+				std::cout << "pixel format not supported, trying 420p " << std::endl;         
             } else {
                 std::cout << "YUV4MPEG stream contains an unknown pixel format " << std::endl;              
             }
             while (tokstart < header_end && *tokstart != 0x20)
                 tokstart++;
             break;
-        case 'I': // Interlace type //TODO
+        case 'I': // Interlace type //TODO: ignored for now
             switch (*tokstart++){
             case '?':
               
@@ -166,7 +166,7 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
         }
     }
  
-	/*header parsing end */
+	/* header parsing end */
 
 	frame_w[Y] = w;	
 	frame_h[Y] = h;	
@@ -176,11 +176,11 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
 		frame_w[V] = frame_w[U] = w >> 1;
 		frame_h[V] = frame_h[U] = h >> 1;
 	}else if(pixfmt ==  YUV422){
-		//to be tested
+		/* to be tested */
 		frame_h[V] = frame_h[U] = h;
 		frame_w[V] = frame_w[U] = w >> 1;
 	}else if(pixfmt ==  YUV444){
-		//to be tested
+		/* to be tested */
 		frame_h[V] = frame_h[U] = h;
 		frame_w[V] = frame_w[U] = w;
 	}else{
@@ -194,11 +194,10 @@ Y4MReader::~Y4MReader(){
 }
 
 bool Y4MReader::nextFrame(cv::Mat& theFrame){
-	/* consume header */
 
-	char f_header[MAX_FRAME_HEADER]; //reserve bytes for the header
+	char f_header[MAX_FRAME_HEADER]; /* reserve bytes for the header */
 			
-	//consume header + a little extra
+	/* consume header + a little extra */
 	int i;
 	for (i = 0; i < MAX_FRAME_HEADER; i++) {
 		f_header[i] = this->fileInput.get();	
@@ -250,7 +249,7 @@ int Y4MReader::getVideoHeight(){
 	return this->h;
 }
 int Y4MReader::getNFrames(){
-	return -1;
+	return -1; /* we do not know how many frames the video has */
 }
 std::string Y4MReader::getVideoFilePath(){
 	return this->videoFilePath;
