@@ -404,10 +404,6 @@ int main(int argc, char **argv){
 			mpd_file.close();
 		}
 	}
-
-	
-
-	dbg("shutting down...", verbose);
 	
 	return 0;	
 }
