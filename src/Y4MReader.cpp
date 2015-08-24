@@ -32,7 +32,7 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
 
 	char header[MAX_YUV4_HEADER]; //reserve bytes for the header
 
-	//consume header + a little extra
+	//consume header 
 	int i;
 	for (i = 0; i < MAX_YUV4_HEADER; i++) {
 		header[i] = this->fileInput.get();	
@@ -197,7 +197,7 @@ bool Y4MReader::nextFrame(cv::Mat& theFrame){
 
 	char f_header[MAX_FRAME_HEADER]; /* reserve bytes for the header */
 			
-	/* consume header + a little extra */
+	/* consume header */
 	int i;
 	for (i = 0; i < MAX_FRAME_HEADER; i++) {
 		f_header[i] = this->fileInput.get();	
@@ -211,28 +211,17 @@ bool Y4MReader::nextFrame(cv::Mat& theFrame){
 	if(	!(strncmp("FRAME",f_header, 5) == 0 ))
 		return false;
 
-	uchar bufferY[frame_w[Y] * frame_h[Y]]; 
-	uchar bufferU[frame_w[U] * frame_h[U]]; 
-	uchar bufferV[frame_w[V] * frame_h[V]]; 
+	int bsize = frame_w[Y]*frame_h[Y] +
+			frame_w[U]*frame_h[U] +
+			frame_w[V]*frame_h[V];
+	char buffer[bsize]; 
+	this->fileInput.read(buffer, sizeof(char)*bsize);
 
-	cv::Mat planes[3];
-	cv::Mat tmp;
-	this->fileInput.read((char*)(&bufferY), sizeof(char) * frame_w[Y] * frame_h[Y]);
+	cv::Mat tmp(frame_h[Y] + frame_h[Y]/2, frame_w[Y], CV_8UC1, (void*) buffer);
+	cv::Mat mRGB(frame_h[Y], frame_w[Y], CV_8UC3);
+	cv::cvtColor(tmp, mRGB, CV_YUV2RGB_YV12, 3);
+	cv::cvtColor(mRGB, tmp, CV_RGB2YCrCb, 3);
 	
-	planes[Y] = cv::Mat(frame_h[Y], frame_w[Y], CV_8UC1, bufferY) ;	
-
-	this->fileInput.read((char*)(&bufferU), sizeof(char) * frame_w[U] * frame_h[U]) ;
-	tmp = cv::Mat(frame_h[U], frame_w[U], CV_8UC1, bufferU);	
-	cv::resize(tmp, planes[U], cv::Size(), frame_w[Y] / frame_w[U], frame_h[Y] / frame_h[U], CV_INTER_CUBIC);
-
-	this->fileInput.read((char*)(&bufferV), sizeof(char) * frame_w[V] * frame_h[V]) ;
-	tmp =  cv::Mat(frame_h[V], frame_w[V], CV_8UC1, bufferV);	
-	cv::resize(tmp, planes[V], cv::Size(), frame_w[Y] / frame_w[V], frame_h[Y] / frame_h[V], CV_INTER_CUBIC);
-
-	
-	tmp = cv::Mat(h, w, CV_8UC3);
-	merge(planes, 3, tmp);
-
 	tmp.convertTo(theFrame, CV_32F);
 
 	return true;
