@@ -81,7 +81,11 @@ double PSNR::computeSingleFrame(cv::Mat& reference, cv::Mat& processed){
 	if(mse <= 1e-10){
 		mse = 1e-10; // => psnr clip to ~148
 	}	
-
+	// Attention. assuming 8bit samples for reference
+	// this means, if processing 16 bit values, we are ~48dB off
+	// 		20*(log(2^8 -1)-log(2^16-1))/log(10) = 48.19866
+	// general formula for offset calculation with samples of B bits: 
+	// 		20*(log(2^8-1))-log(2^B-1))/log(10)
 	return 10.0 * log10((255 * 255) / mse);
 }
 void PSNR::addCalculation(double val, int nFrames){
