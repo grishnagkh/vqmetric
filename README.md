@@ -76,14 +76,16 @@ sample call
 #### Features
 
  * PSNR
+	As PSNR depends on the input sample depth, we just assume input samples of 8bit. This results when processing 16bit data in an offset of ~48dB, the formula forcalculation is 20*(log(2^8-1))-log(2^B-1))/log(10), with B as the number of bits per sample
+
  * SSIM
  * VQM
  
 #### Supported Input Formats
 
-Tested input formats are 
- * mp4
- * y4m (YUV420)
+Supported & tested input formats are 
+ * mp4 (8bit samples)
+ * y4m (YUV420, 8bit samples)
   
 ##### Work in Progress
 
