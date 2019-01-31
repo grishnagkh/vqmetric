@@ -49,9 +49,12 @@ int main(int argc, char **argv){
 	int ssim_flag = 0;
 	int vqm_flag = 0;
 	int dashready_flag = 0;
+	bool console_output_flag = false;
 
 	int verbose = 0;
 	int loglvl = 0;
+
+        bool ignore_framerate = false;
 
 	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling="auto", out_prefix;
 	
@@ -76,12 +79,13 @@ int main(int argc, char **argv){
 			  {"output",  			required_argument, 	0, 'o'}, // standard, extended, pedantic
 			  {"scaling",  			required_argument, 	0, 'c'}, // lanczos, bicubic scaling
 			  {"ignore-frame-rate", 	no_argument, 	0, 'F'},
+                          {"console-output",            no_argument,    0, 'C'},
 			  {0, 0, 0, 0}
 		};
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:hF",
+		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:hFC",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -130,6 +134,9 @@ int main(int argc, char **argv){
 				break;
                         case 'F':
                                 ignore_framerate = true;
+                                break;
+                        case 'C':
+                                console_output_flag = true;
                                 break;
 		}
 	}
@@ -407,9 +414,19 @@ int main(int argc, char **argv){
 			mpd_file << "</Quality>" << std::endl;
 			mpd_file.close();
 		}
+
+                if (console_output_flag) {
+                        if(psnr_flag)
+                          std::cout << psnr_res[i] << " ";
+
+                        if(ssim_flag)
+                          std::cout << ssim_res[i] << " ";
+
+                        std::cout << "\n";
+                }
 	}
-	
-	return 0;	
+
+	return 0;
 }
 
 
