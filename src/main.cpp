@@ -296,7 +296,7 @@ int main(int argc, char **argv){
 	}
 
 	if(timesString.size() == 0){
-		std::cout << "no time argument calculating over video" ;
+		std::cerr << "no time argument calculating over video\n" ;
 		timesString="2";
 	}
 
