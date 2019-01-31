@@ -161,6 +161,7 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
                 tokstart++;
             break;
         case 'X': // Vendor extensions, ignore here
+            while (tokstart < header_end && *tokstart != 0x20)
                 tokstart++;
             break;
         }
