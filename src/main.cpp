@@ -75,12 +75,13 @@ int main(int argc, char **argv){
 			  {"reference-format",  required_argument,  0, 'R'}, // try to estimate by file ending
 			  {"output",  			required_argument, 	0, 'o'}, // standard, extended, pedantic
 			  {"scaling",  			required_argument, 	0, 'c'}, // lanczos, bicubic scaling
+			  {"ignore-frame-rate", 	no_argument, 	0, 'F'},
 			  {0, 0, 0, 0}
 		};
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:h",
+		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:hF",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -126,7 +127,10 @@ int main(int argc, char **argv){
 			case 'h':
 				printUsage();
 				exit(0);
-				break;		 
+				break;
+                        case 'F':
+                                ignore_framerate = true;
+                                break;
 		}
 	}
 	if (optind < argc){
@@ -178,7 +182,7 @@ int main(int argc, char **argv){
 	dbg("[debug] requesting fps...\n", verbose);
 
 
-	if(rR->getFps() != pR->getFps()){
+	if(!ignore_framerate && rR->getFps() != pR->getFps()){
 		std::cout << "original and processed video have different frame rates, we abort here";
 		return -1;
 	}
