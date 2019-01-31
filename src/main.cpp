@@ -480,11 +480,15 @@ void printUsage(){
 
  std::cout << "-h, --help\n\tprint this message" << std::endl;
  std::cout << "-v <level>, --verbose <level>" << std::endl;
-	std::cout << "\t" << VERBOSE_SILENT << "- silent" << std::endl;
-	std::cout << "\t" << VERBOSE << "- verbose" << std::endl;
-	std::cout << "\t" << VERBOSE_EXTENDED << "- verbose extended (same as verbose, for now) " << std::endl;
-	std::cout << "\t" << VERBOSE_DEBUG << "- verbose debug" << std::endl;
-	
+ std::cout << "\t" << VERBOSE_SILENT << "- silent" << std::endl;
+ std::cout << "\t" << VERBOSE << "- verbose" << std::endl;
+ std::cout << "\t" << VERBOSE_EXTENDED << "- verbose extended (same as verbose, for now) " << std::endl;
+ std::cout << "\t" << VERBOSE_DEBUG << "- verbose debug" << std::endl;
+
+ std::cout << "-F, --ignore-frame-rate\n";
+ std::cout << "\tDo not check for equal frame-rates in input streams\n";
+ std::cout << "-C, --console-output\n";
+ std::cout << "\tWrite measurement results to console\n";
 
  std::cout << "sample call" << std::endl;
  std::cout << "\t./vqtool -p <processed video> -r <reference video> --psnr --ssim out" << std::endl;
