@@ -75,13 +75,13 @@ class VQM: public Metric{
 	int verbose_level;
 
 	/* constants for VQM calculation  */
-	static const double FACTOR_SI_LOSS = -0.2097;
-	static const double FACTOR_SI_GAIN = -2.3416;
-	static const double FACTOR_HV_LOSS = 0.5969;
-	static const double FACTOR_HV_GAIN = 0.2483;
-	static const double FACTOR_CT_ATI_GAIN = 0.0431;
-	static const double FACTOR_CHROMA_SPREAD = 0.0192;
-	static const double FACTOR_CHROMA_EXTREME = 0.0076;
+	static constexpr double FACTOR_SI_LOSS = -0.2097;
+	static constexpr double FACTOR_SI_GAIN = -2.3416;
+	static constexpr double FACTOR_HV_LOSS = 0.5969;
+	static constexpr double FACTOR_HV_GAIN = 0.2483;
+	static constexpr double FACTOR_CT_ATI_GAIN = 0.0431;
+	static constexpr double FACTOR_CHROMA_SPREAD = 0.0192;
+	static constexpr double FACTOR_CHROMA_EXTREME = 0.0076;
 
 	public:
 			

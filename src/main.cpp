@@ -49,9 +49,12 @@ int main(int argc, char **argv){
 	int ssim_flag = 0;
 	int vqm_flag = 0;
 	int dashready_flag = 0;
+	bool console_output_flag = false;
 
 	int verbose = 0;
 	int loglvl = 0;
+
+        bool ignore_framerate = false;
 
 	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling="auto", out_prefix;
 	
@@ -75,12 +78,14 @@ int main(int argc, char **argv){
 			  {"reference-format",  required_argument,  0, 'R'}, // try to estimate by file ending
 			  {"output",  			required_argument, 	0, 'o'}, // standard, extended, pedantic
 			  {"scaling",  			required_argument, 	0, 'c'}, // lanczos, bicubic scaling
+			  {"ignore-frame-rate", 	no_argument, 	0, 'F'},
+                          {"console-output",            no_argument,    0, 'C'},
 			  {0, 0, 0, 0}
 		};
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:h",
+		c = getopt_long (argc, argv, "t:p:r:R:P:o:c:v:l:hFC",
 				       long_options, &option_index);
 
 		/* Detect the end of the options. */
@@ -126,7 +131,13 @@ int main(int argc, char **argv){
 			case 'h':
 				printUsage();
 				exit(0);
-				break;		 
+				break;
+                        case 'F':
+                                ignore_framerate = true;
+                                break;
+                        case 'C':
+                                console_output_flag = true;
+                                break;
 		}
 	}
 	if (optind < argc){
@@ -178,7 +189,7 @@ int main(int argc, char **argv){
 	dbg("[debug] requesting fps...\n", verbose);
 
 
-	if(rR->getFps() != pR->getFps()){
+	if(!ignore_framerate && rR->getFps() != pR->getFps()){
 		std::cout << "original and processed video have different frame rates, we abort here";
 		return -1;
 	}
@@ -285,7 +296,7 @@ int main(int argc, char **argv){
 	}
 
 	if(timesString.size() == 0){
-		std::cout << "no time argument calculating over video" ;
+		std::cerr << "no time argument calculating over video\n" ;
 		timesString="2";
 	}
 
@@ -403,9 +414,19 @@ int main(int argc, char **argv){
 			mpd_file << "</Quality>" << std::endl;
 			mpd_file.close();
 		}
+
+                if (console_output_flag) {
+                        if(psnr_flag)
+                          std::cout << psnr_res[i] << " ";
+
+                        if(ssim_flag)
+                          std::cout << ssim_res[i] << " ";
+
+                        std::cout << "\n";
+                }
 	}
-	
-	return 0;	
+
+	return 0;
 }
 
 
@@ -459,11 +480,15 @@ void printUsage(){
 
  std::cout << "-h, --help\n\tprint this message" << std::endl;
  std::cout << "-v <level>, --verbose <level>" << std::endl;
-	std::cout << "\t" << VERBOSE_SILENT << "- silent" << std::endl;
-	std::cout << "\t" << VERBOSE << "- verbose" << std::endl;
-	std::cout << "\t" << VERBOSE_EXTENDED << "- verbose extended (same as verbose, for now) " << std::endl;
-	std::cout << "\t" << VERBOSE_DEBUG << "- verbose debug" << std::endl;
-	
+ std::cout << "\t" << VERBOSE_SILENT << "- silent" << std::endl;
+ std::cout << "\t" << VERBOSE << "- verbose" << std::endl;
+ std::cout << "\t" << VERBOSE_EXTENDED << "- verbose extended (same as verbose, for now) " << std::endl;
+ std::cout << "\t" << VERBOSE_DEBUG << "- verbose debug" << std::endl;
+
+ std::cout << "-F, --ignore-frame-rate\n";
+ std::cout << "\tDo not check for equal frame-rates in input streams\n";
+ std::cout << "-C, --console-output\n";
+ std::cout << "\tWrite measurement results to console\n";
 
  std::cout << "sample call" << std::endl;
  std::cout << "\t./vqtool -p <processed video> -r <reference video> --psnr --ssim out" << std::endl;

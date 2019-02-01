@@ -161,6 +161,7 @@ Y4MReader::Y4MReader(string x):VideoReader(x){
                 tokstart++;
             break;
         case 'X': // Vendor extensions, ignore here
+            while (tokstart < header_end && *tokstart != 0x20)
                 tokstart++;
             break;
         }
@@ -214,15 +215,16 @@ bool Y4MReader::nextFrame(cv::Mat& theFrame){
 	int bsize = frame_w[Y]*frame_h[Y] +
 			frame_w[U]*frame_h[U] +
 			frame_w[V]*frame_h[V];
-	char buffer[bsize]; 
+	char* buffer = (char*)malloc(bsize);
 	this->fileInput.read(buffer, sizeof(char)*bsize);
 
 	cv::Mat tmp(frame_h[Y] + frame_h[Y]/2, frame_w[Y], CV_8UC1, (void*) buffer);
 	cv::Mat mRGB(frame_h[Y], frame_w[Y], CV_8UC3);
 	cv::cvtColor(tmp, mRGB, CV_YUV2RGB_YV12, 3);
 	cv::cvtColor(mRGB, tmp, CV_RGB2YCrCb, 3);
-	
+
 	tmp.convertTo(theFrame, CV_32F);
+        free(buffer);
 
 	return true;
 }
