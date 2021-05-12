@@ -12,14 +12,19 @@ required dependencies to build (on ubuntu 20.04)
 sudo apt-get install build-essential 
 cmake
 libopencv-dev
+clang-tidy
+clang-format
+llvm
 ```
 
 ## Build
 
-Just run make... ;)
 
 ``` bash 
-$ make 
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make -j2 
 ```
 
 ### Usage
