@@ -19,6 +19,7 @@
  */
 
 #include "Metric.hpp"
+#include <opencv2/highgui/highgui_c.h>
 
 /******** SI FILTER ********/
 

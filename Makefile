@@ -3,8 +3,8 @@
 
 CC = g++
 CFLAGS2 = -Wall -g -I include
-CFLAGS = -Wall -g -I include `pkg-config --cflags opencv`
-LIBS = `pkg-config --libs opencv`
+CFLAGS = -Wall -g -I include `pkg-config --cflags opencv4`
+LIBS = `pkg-config --libs opencv4`
 LDFLAGS = -lm
 OBJDIR = build
 EXEC_NAME=vqtool
@@ -24,7 +24,7 @@ prepare:
 build-all: ${OBJ} 
 	${CC} ${CFLAGS} ${OBJ} ${LIBS} ${LDFLAGS} -o ${EXEC_NAME}
 ${OBJDIR}/%.o: %.cpp
-	${CC} ${CFLAGS2} -c -o $@ $<
+	${CC} ${CFLAGS} -c -o $@ $<
 clean:
 	${RM} ${EXEC_NAME} 
 	${RM} ${OBJDIR}

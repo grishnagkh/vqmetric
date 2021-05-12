@@ -25,7 +25,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "opencv2/opencv.hpp" 
+#include <opencv2/opencv.hpp>
 
 /*
  * This is the base Metric class for Full reference Metrics. It provides utilities 

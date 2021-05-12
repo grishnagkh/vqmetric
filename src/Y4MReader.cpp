@@ -20,6 +20,7 @@
 
 #include "Y4MReader.hpp"
 #include <math.h>
+#include <opencv2/highgui/highgui_c.h>
 
 
 Y4MReader::Y4MReader(string x):VideoReader(x){		

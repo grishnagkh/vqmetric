@@ -2,9 +2,25 @@
 
 a tool for calculating full-reference objective video quality metrics
 
-#### Compilation
+## Prerequisites
 
 Compilation tested with Ubuntu 14.0.4 and OpenCV 2.4.8.0 
+
+required dependencies to build (on ubuntu 20.04)
+
+```bash
+sudo apt-get install build-essential 
+cmake
+libopencv-dev
+```
+
+## Build
+
+Just run make... ;)
+
+``` bash 
+$ make 
+```
 
 ### Usage
 
