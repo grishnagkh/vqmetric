@@ -51,9 +51,10 @@ void Metric::getFilterMask(int len, float *filter){
 void Metric::si_filter(cv::Mat& src, cv::Mat& si_filtered, cv::Mat& hfiltered,  cv::Mat& vfiltered, int len){
 	
 	float filterMask[len];
-	float filterA [len][len];
-
+	memset(filterMask, 0, len * sizeof(float));
 	getFilterMask(len, filterMask);
+
+	float filterA [len][len];
 	for(int i=0; i<len; i++){
 		for(int j=0; j<len; j++){
 			filterA[i][j] = filterMask[i];

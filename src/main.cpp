@@ -54,12 +54,12 @@ int main(int argc, char **argv){
 	int verbose = 0;
 	int loglvl = 0;
 
-        bool ignore_framerate = false;
+	bool ignore_framerate = false;
 
 	string timesString="", processed, reference, procfmt, reffmt, outputmode, scaling="auto", out_prefix;
 	
 	while (1){
-		static struct option long_options[] = {	
+		struct option long_options[] = {	
 			  {"psnr", no_argument, &psnr_flag, 1},
 			  {"ssim", no_argument, &ssim_flag, 1},
 			  {"vqm",  no_argument, &vqm_flag , 1},
@@ -79,7 +79,7 @@ int main(int argc, char **argv){
 			  {"output",  			required_argument, 	0, 'o'}, // standard, extended, pedantic
 			  {"scaling",  			required_argument, 	0, 'c'}, // lanczos, bicubic scaling
 			  {"ignore-frame-rate", 	no_argument, 	0, 'F'},
-                          {"console-output",            no_argument,    0, 'C'},
+              {"console-output",            no_argument,    0, 'C'},
 			  {0, 0, 0, 0}
 		};
 		/* getopt_long stores the option index here. */
@@ -317,7 +317,7 @@ int main(int argc, char **argv){
 	std::string filename;
 	std::string mpd_filename;
 
-	int size;
+	int size = 0;
 
 	for(uint i=0; i<time_vector.size(); i++){
 		

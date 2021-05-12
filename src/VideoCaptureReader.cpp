@@ -22,7 +22,7 @@
 #include <opencv2/highgui/highgui_c.h>
 
 VideoCaptureReader::VideoCaptureReader(string x):VideoReader(x){
-	cv::VideoCapture cap();
+	cv::VideoCapture cap;
 	this->cap.open(this->videoFilePath);
 };
 VideoCaptureReader::~VideoCaptureReader(){

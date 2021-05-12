@@ -15,6 +15,7 @@ libopencv-dev
 clang-tidy
 clang-format
 llvm
+cppcheck
 ```
 
 ## Build

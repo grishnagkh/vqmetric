@@ -142,13 +142,10 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 	/* (chroma spread 1) Divide the CB and CR color planes 
 		into separate 8 pixel x 8 line x 1 frame S-T regions. */
 	for(int i=0; i< nFrames; i++){
-		tx = 0;
 		ex = 0;
 		ex2 = 0;
 		chroma_extreme_t.clear();
 		for(int x = 0; x < w - w_size_x; x+=w_size_x){	
-			cr_mean_p = cb_mean_p = 0;
-			cr_mean_r = cb_mean_r = 0;
 			for(int y = 0; y < h - w_size_y; y+=w_size_y){	
 
 				/* (chroma spread 2) Compute the mean of each S-T region. 
@@ -472,6 +469,11 @@ double VQM::compute(cv::Mat ref[][3], cv::Mat proc[][3], int nFrames){
 /****************************************/
 
 double VQM::timeCollapse(int nSlices){
+
+	if(nSlices <= 0) {
+		std::cerr << "nSlices at time collapse is zero" << std::endl;
+		return 0;
+	}
 
 	si_gain_collapsed.clear();
 	si_loss_collapsed.clear();
