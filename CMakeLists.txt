@@ -9,6 +9,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
+set(CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES};${OpenCV_LIBS}")
+
+include(cmake/googletest.cmake)
+include_directories(${GTEST_INCLUDE_DIR})
+set(CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES};${GTEST_LIBRARY};${GTEST_MAIN_LIBRARY};${GMOCK_LIBRARY};${GMOCK_MAIN_LIBRARY}")
+
+include(cmake/googlebench.cmake)
+include_directories(${GBENCH_INCLUDE_DIR})
 
 option(EXPORT_COMPILE_COMMANDS "export compile commands" on)
 if(${EXPORT_COMPILE_COMMANDS})
@@ -52,8 +60,16 @@ set(VQMETRIC_SRC
 	src/VideoCaptureReader.cpp
 	src/VideoReader.cpp
 	src/Y4MReader.cpp
-	src/main.cpp
 )
 
-add_executable(vqmetric ${VQMETRIC_SRC})
-target_link_libraries(vqmetric ${OpenCV_LIBS})
+add_library(vqmetric SHARED ${VQMETRIC_SRC})
+target_link_libraries(vqmetric ${CMAKE_REQUIRED_LIBRARIES})
+
+add_executable(vqtool src/main.cpp)
+target_link_libraries(vqtool vqmetric)
+
+set(BENCHMARK_SRC
+	bench/benchmark.cpp
+)
+add_executable(benchmark ${BENCHMARK_SRC})
+target_link_libraries(benchmark vqmetric ${GBENCH_LIBS}  pthread) # add pthread as required, GBENCHLIBS I think have an alias?
